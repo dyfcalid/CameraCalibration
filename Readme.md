@@ -1,5 +1,7 @@
 # Camera Calibration
-> 相机标定和图像去畸变python脚本  
+> 相机标定和图像去畸变python脚本
+  
+依赖库：opencv、numpy  
 
 使用`fisheye.py`可以完成鱼眼相机的**快速、实时标定**，生成标定结果  
 使用`undistort.py`可以便捷地完成图像的**去畸变处理**  
@@ -124,6 +126,6 @@ python undistort.py -h
 *注：具体函数细节可参照openCV官方文档或代码注释*
 
 ## Code Detailed Annotation
-关于fisheye.py的中文详细代码注释可以参见fisheye.ipynb
+关于fisheye.py的**中文详细代码注释**可以参见[fisheye.ipynb](https://nbviewer.jupyter.org/github/dyfcalid/CameraCalibration/blob/master/fisheye.ipynb)  
   
 `2021.4 ZZH`
