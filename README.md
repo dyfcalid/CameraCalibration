@@ -146,7 +146,7 @@ python undistort.py -h
 - 估计计算相机内参 (cv2.CALIB_USE_INTRINSIC_GUESS)，参考[张正友标定法原理](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.558.1926&rep=rep1&type=pdf)
 - 得到标定结果 (cv2.fisheye.calibrate)，并根据新数据不断优化  
 - 根据相机内参和畸变向量得到映射矩阵，计算无畸变和修正转换关系 (cv2.fisheye.initUndistortRectifyMap)
-- 重映射实现图像的去畸变处理 (cv2.remap)
+- 重映射实现图像的去畸变处理 (cv2.remap)  
 *注：具体函数细节可参照openCV官方文档或代码注释*
 
 ## Code Detailed Annotation
