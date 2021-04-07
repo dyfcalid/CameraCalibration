@@ -101,31 +101,58 @@ python undistort.py -h
 ## Calibration Principle
 > Reference: [OpenCV官方文档](https://docs.opencv.org/3.0.0/db/d58/group__calib3d__fisheye.html)、视觉SLAM十四讲
 
-世界坐标系和相机坐标系的变换可以通过旋转矩阵R和平移向量t实现，即：  
+**鱼眼相机（单目）标定的目的是为了获取相机内参K和畸变系数D，根据这两个参数即可完成图像的去畸变处理**   
+
+【坐标转换关系】：  
+![2.png](https://i.loli.net/2021/04/07/4Nwzeag9EZTrDWl.png)
+
+【刚体变换】世界坐标系Pw=(X,Y,Z)和相机坐标系Pc=(x,y,z)的变换可以通过旋转矩阵R和平移向量t实现:    
+  
 ![1](http://latex.codecogs.com/svg.latex?\begin{bmatrix}{x}\\\\{y}\\\\{z}\\\\\end{bmatrix}=R\\cdot\\begin{bmatrix}{X}\\\\{Y}\\\\{Z}\\\\\end{bmatrix}+t)   
-相机的内参矩阵K表示如下，**相机内参可以通过数学推导得到闭环解，是标定结果之一**：  
-![2](http://latex.codecogs.com/svg.latex?\begin{bmatrix}{f_{x}}&{0}&{c_{x}}\\\\{0}&{f_{y}}&{c_{y}}\\\\{0}&{0}&{1}\\\\\end{bmatrix})  
-用变换矩阵T=[R|t]表示相机的位姿，结合上式像素坐标Pc和世界坐标Pw的关系：    
-![3](http://latex.codecogs.com/svg.latex?\{P_c}=KT{P_w})  
-对坐标z进行归一化，得到归一化坐标x'和y'，并使用极坐标系r、θ进行表示：  
-![4](http://latex.codecogs.com/svg.latex?\begin{cases}x^{'}=x\setminus{z}\\\\y^{'}=y\setminus{z}\\\\r^{2}=x^{'2}+y^{'2}\\\\\theta=atan(r)\\\\\end{cases})  
-透镜形状引起的畸变分为径向畸变和切向畸变两种，可以用和距中心距离有关的二次及高次多项式函数进行纠正  
-针对鱼眼相机的**畸变，使用k1,k2,k3,k4为系数的θ多项式进行描述，D=(k1,k2,k3,k4)即为标定结果之一**：  
-![5](http://latex.codecogs.com/svg.latex?\\theta_{d}=\theta(1+k_{1}\theta^{2}+k_{2}\theta^{4}+k_{3}\theta^{6}+k_{4}\theta^{8}))  
-相机坐标系点经过畸变后坐标为：  
-![6](http://latex.codecogs.com/svg.latex?\begin{cases}x^{'}=(\theta_{d}\setminus{r})x\\\\y^{'}=(\theta_{d}\setminus{r})y\\\\\end{cases})  
-最终的像素点坐标为：  
-![6](http://latex.codecogs.com/svg.latex?\begin{cases}u=f_{x}(x^{'}+\alpha{y^{'}})+c_{x}\\\\v=f_{y}yy+c_{y}\\\\\end{cases})  
+
+用变换矩阵**T=[R|t]** 表示相机的位姿，即：  
+
+![2](http://latex.codecogs.com/svg.latex?\{P_c}=T{P_w})  
+
+对坐标z进行归一化，得到归一化坐标并使用极坐标系r、θ进行表示：  
+  
+![3](http://latex.codecogs.com/svg.latex?\begin{cases}a=x\setminus{z}\\\\b=y\setminus{z}\\\\r^{2}=a^{2}+b^{2}\\\\\theta=atan(r)\\\\\end{cases})   
+  
+【去畸变】透镜形状引起的畸变分为径向畸变和切向畸变两种，可以用和距中心距离有关的二次及高次多项式函数进行纠正  
+针对鱼眼相机的**畸变，使用k1,k2,k3,k4为系数的θ多项式进行描述，D=(k1,k2,k3,k4)** 即为标定结果之一：  
+  
+![4](http://latex.codecogs.com/svg.latex?\\theta_{d}=\theta(1+k_{1}\theta^{2}+k_{2}\theta^{4}+k_{3}\theta^{6}+k_{4}\theta^{8}))  
+  
+相机坐标系点经过去畸变后坐标如下转换，此时Pc=(x',y',1)：  
+  
+![5](http://latex.codecogs.com/svg.latex?\begin{cases}x^{'}=(\theta_{d}\setminus{r})x\\\\y^{'}=(\theta_{d}\setminus{r})y\\\\\end{cases})  
+
+相机的内参矩阵K表示如下，**相机内参可以通过数学推导得到闭环解**，是标定结果之一：  
+  
+![6](http://latex.codecogs.com/svg.latex?K=\begin{bmatrix}{f_{x}}&{0}&{c_{x}}\\\\{0}&{f_{y}}&{c_{y}}\\\\{0}&{0}&{1}\\\\\end{bmatrix})  
+  
+【透视投影】根据相机模型可得像素坐标Puv和相机坐标Pc的关系：  
+  
+![7](http://latex.codecogs.com/svg.latex?\{P_u_v}=K{P_c}) 
+  
+经过投影后，最终的像素点坐标为：（其中skew参数α一般为0）  
+  
+![8](http://latex.codecogs.com/svg.latex?\begin{cases}u=f_{x}(x^{'}+\alpha{y^{'}})+c_{x}\\\\v=f_{y}y^{'}+c_{y}\\\\\end{cases})  
   
 **标定过程**：
 - 摄像头采集图像（有一定间隔）
 - 寻找棋盘角点 (cv2.findChessboardCorners)，得到角点坐标
-- 对角点坐标进行亚像素优化 (cv2.cornerSubPix)，原理参照[亚像素优化原理](https://xueyayang.github.io/pdf_posts/%E4%BA%9A%E5%83%8F%E7%B4%A0%E8%A7%92%E7%82%B9%E7%9A%84%E6%B1%82%E6%B3%95.pdf)
-- 估计计算相机内参 (cv2.CALIB_USE_INTRINSIC_GUESS)
+- 对角点坐标进行亚像素优化 (cv2.cornerSubPix)，参考[亚像素优化原理](https://xueyayang.github.io/pdf_posts/%E4%BA%9A%E5%83%8F%E7%B4%A0%E8%A7%92%E7%82%B9%E7%9A%84%E6%B1%82%E6%B3%95.pdf)
+- 估计计算相机内参 (cv2.CALIB_USE_INTRINSIC_GUESS)，参考[张正友标定法原理](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.558.1926&rep=rep1&type=pdf)
 - 得到标定结果 (cv2.fisheye.calibrate)，并根据新数据不断优化  
+- 根据相机内参和畸变向量得到映射矩阵，计算无畸变和修正转换关系 (cv2.fisheye.initUndistortRectifyMap)
+- 重映射实现图像的去畸变处理 (cv2.remap)
 *注：具体函数细节可参照openCV官方文档或代码注释*
 
 ## Code Detailed Annotation
 关于fisheye.py的**中文详细代码注释**可以参见[fisheye.ipynb](https://nbviewer.jupyter.org/github/dyfcalid/CameraCalibration/blob/master/fisheye.ipynb)  
   
-`2021.4 ZZH`
+`2021.4 ZZH`  
+
+[回到顶部](#camera-calibration)
+
