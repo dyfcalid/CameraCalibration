@@ -1,9 +1,11 @@
-# Camera Calibration
-> 相机标定和图像去畸变python脚本
+# Camera Intrinsic Calibration
+> 相机内参在线标定
   
 依赖库：opencv、numpy  
 
-使用`fisheye.py`可以完成鱼眼相机的**快速、实时标定**，生成标定结果  
+使用`intrinsicCalib.py`可以完成相机的**在线标定**和**离线标定**，包含鱼眼相机和普通相机模型，  
+同时支持**相机、视频、图像**三种输入，生成相机内参和畸变向量  
+  
 使用`undistort.py`可以便捷地完成图像的**去畸变处理**  
 
 【目录】  
