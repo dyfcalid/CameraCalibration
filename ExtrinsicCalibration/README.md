@@ -34,20 +34,20 @@ python extrinsicCalib.py
 python extrinsicCalib.py -h
 ```
 
-| Argument  | Type | Default   | Help                                             | 
-|:----------|:----:|:---------:|:-------------------------------------------------|
-| -id       | int  | 1         | Camera ID                                        |
-| -path     | str  | ./data/   | Input Video/Image Path                           |
-| -fw       | int  | 1280      | Camera Frame Width                               |
-| -fh       | int  | 720       | Camera Frame Height                              |
-| -bw       | int  | 9         | Chess Board Width (corners number)               |
-| -bh       | int  | 6         | Chess Board Height (corners number)              |
-| -src      | str  | src       | Source Image File Name Prefix (eg.:img_src)      |
-| -dst      | str  | dst       | Destionation Image File Name Prefix (eg.:img_dst)|
-| -size     | int  | 15        | Scaled Chess Board Square Size (image pixel)     |
-| -center   | bool | True      | Center Image Manually (Ture/False)               |
-| -scale    | bool | True      | Scale Image to Fix Board Size (Ture/False)       |
-| -store    | bool | False     | Store Centerd/Scaled Images (Ture/False)         |
+| Argument  | Type | Default   | Help                                              | 
+|:----------|:----:|:---------:|:--------------------------------------------------|
+| -id       | int  | 1         | Camera ID                                         |
+| -path     | str  | ./data/   | Input Video/Image Path                            |
+| -fw       | int  | 1280      | Camera Frame Width                                |
+| -fh       | int  | 720       | Camera Frame Height                               |
+| -bw       | int  | 9         | Chess Board Width (corners number)                |
+| -bh       | int  | 6         | Chess Board Height (corners number)               |
+| -src      | str  | img_src   | Source Image File Name Prefix (eg.: img_src)      |
+| -dst      | str  | img_dst   | Destionation Image File Name Prefix (eg.: img_dst)|
+| -size     | int  | 15        | Scaled Chess Board Square Size (image pixel)      |
+| -center   | bool | True      | Center Image Manually (Ture/False)                |
+| -scale    | bool | True      | Scale Image to Fix Board Size (Ture/False)        |
+| -store    | bool | False     | Store Centerd/Scaled Images (Ture/False)          |
    
 -----------------------------------------------------------------------------------  
   
@@ -61,9 +61,9 @@ python extrinsicCalib.py -h
 - 确认后会显示居中的图像，ESC关闭  
   
 图像缩放时：  
-- 程序会首先对源图像img_dst中提取角点坐标，并计算棋盘的小格子平均尺寸  
+- 程序会首先对目标图像img_dst中提取角点坐标，并计算棋盘的小格子平均尺寸  
 - 根据设置的`-size`值（即为最终标定板棋盘格在图中的像素长度，注意此参数与intrinsicCalib.py含义不同）  
-计算缩放系数对图像进行缩放，保证所有源图像的标定板在图中的像素尺寸一致（即无人机的高度一致） 
+计算缩放系数对图像进行缩放，保证所有目标图像的标定板在图中的像素尺寸一致（即无人机的高度一致） 
 - 对缩放后的图像进行裁剪或边沿填充  
 - 显示缩放后的图像，ESC关闭  
   
