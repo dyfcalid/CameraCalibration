@@ -4,12 +4,16 @@
 依赖库：opencv、numpy  
 
 使用`intrinsicCalib.py`可以完成相机的**在线标定**和**离线标定**，包含**鱼眼相机**和**普通相机**模型，  
-同时支持**相机、视频、图像**三种输入，生成相机内参和畸变向量  
+同时支持**相机、视频、图像**三种输入，生成**相机内参**和**畸变向量**  
 详细注释包含在`intrinsicCalib.ipynb`中，也可以在Jupyter Notebook中直接运行该代码   
 
 【目录】  
 - [Quick Start](#quick-start)
-  * [intrinsicCalib.py](#intrinsicCalib.py)
+  * [intrinsicCalib.py](#intrinsiccalibpy)
+    + 在线标定
+    + 离线标定
+    + 手动模式
+    + 更多设置
   * [undistort.py](#undistortpy)
 - [Calibration Principle](#calibration-principle)
 - [Code Detailed Annotation](#code-detailed-annotation)
@@ -46,37 +50,87 @@ python intrinsicCalib.py -h
 | -store    | bool | False     | Store Captured Images (Ture/False)               |
 | -crop     | bool | False     | Crop Input Video/Image to (fw,fh) (Ture/False)   |
 | -resize   | bool | False     | Resize Input Video/Image to (fw,fh) (Ture/False) |
-
-**示例**： 相机分辨率设置为1280×720，棋盘格**角点数**为6×8，每小格边长20mm，未输入参数保持默认值，键入
+   
+-------------------------------------------------------------------------------
+   
+#### 示例1 (在线标定)      
+**此时为鱼眼相机自动在线标定** （默认设置）    
+若相机分辨率设置为1280×720，棋盘格**角点数**为6×8，每小格**边长**20mm，未输入参数保持默认值，则键入  
 ```
 python intrinsicCalib.py -fw 1280 -fh 720 -bw 6 -bh 8 -size 20
-```
--------------------------------------------------------------------------------
-**默认设置为相机在线标定**  
-即`-id 1`的相机输入`-input camera`，鱼眼相机模型`-type fisheye`，自动模式`-mode auto`：  
+```  
+（默认`-id 1`的相机输入`-input camera`，鱼眼相机模型`-type fisheye`，自动模式`-mode auto`）  
 程序正常运行，开启相机并读取图像后，会出现`raw_frame`窗口  
 - 将相机对准标定板
-- 按下**SPACE键**开始标定
+- 按下**空格键**开始标定
 - 稳定移动相机从多个角度对准棋盘 
-
+  
 当相机找到标定板并采集到一定数量的数据后，会出现`undistort_frame`窗口，此时已完成初步标定，生成去畸变图像
 - 继续采集数据，程序会不断优化标定结果
-- 当去畸变图像稳定后，按ESC退出，完成标定
-
-标定结果的相机内参矩阵存储在`camera_K.npy`中，畸变系数向量存储在`camera_D.npy`中
-
+- 当去畸变图像稳定后，按**ESC**退出，完成标定
+  
+标定结果的相机内参矩阵存储在`camera_{id}_K.npy`中，畸变系数向量存储在`camera_{id}_D.npy`中  
+其中{id}即为-id的输入参数，**建议每次标定都输入相应相机的ID值**，便于管理和区分数据  
+  
 该程序运行过程如图所示
-![1.png](https://i.loli.net/2021/04/06/OAMVYJqezPcFhjI.png)
-
+![1.png](https://i.loli.net/2021/04/06/OAMVYJqezPcFhjI.png)  
+  
 为提高标定精度，需要：
 - 保证棋盘标定板的平直和准确
 - 尽量保证相机稳定，减小晃动和运动模糊
 - 选择更多角点数量的标定板
 - 保证光照条件
 - 多次标定  
-
+  
 --------------------------------------------------------------------------------
-
+  
+#### 示例2 (离线标定)    
+(注：**建议将视频或图像放下./data/下并按默认值命名**，可以省去参数输入便于使用)  
+若离线标定，输入为本地视频，文件位于./data/video.mp4，棋盘格角点数为6×8，每小格边长20mm，未输入参数保持默认值，则键入  
+```
+python intrinsicCalib.py -input video -path ./data/ -video video.mp4 -bw 6 -bh 8 -size 20
+```  
+  
+若离线标定，输入为本地图片，文件位于./data/下，图片命名为img_raw_xxx.xxx，棋盘格角点数为6×8，每小格边长20mm，未输入参数保持默认值，则键入  
+```
+python intrinsicCalib.py -input image -path ./data/ -image img_raw -bw 6 -bh 8 -size 20
+```    
+**脚本会将输入路径下所有包含该命名前缀的所有图片作为输入**
+  
+--------------------------------------------------------------------------------
+  
+#### 示例3 (手动模式)   
+更改`-mode`为**auto**或**manual**切换自动或手动模式  
+手动模式下：  
+- 当相机输入时，每次按**空格键**捕获当前帧图像作为标定样本
+- 当视频输入时，同上
+- 当图像输入时，逐一读入图片，按**空格键**确认，其他键丢弃该图片
+- 按**ESC**完成并退出标定  
+输出界面会显示已捕获的有效图片数量  
+例：
+```
+python intrinsicCalib.py -mode manual -fw 1280 -fh 720 -bw 6 -bh 8 -size 20
+```    
+  
+--------------------------------------------------------------------------------  
+  
+#### 示例4 (更多设置)     
+`-num` 为标定所需的最少图片数量（仅为初始化标定数量，剩余数量的图片作为精调），可以根据标定质量调整  
+`-delay` 配合自动模式下相机或视频输入，设置为x时，即为每隔x帧取样作为输入  
+`-store` 当相机或视频输入时，设置为True可以将捕获的图像(检测到角点)储存在./data/路径下，可以利用**图像输入手动模式**再次挑选标定  
+`-crop` 在图像中央裁剪出(fw,fh)的大小作为输入，仅为备用设置，一般不使用  
+`-resize` 将输入强制缩放至(fw,fh)大小，注意这样会改变相机内参，仅为备用设置，一般不使用  
+  
+例：
+```
+python intrinsicCalib.py -num 10 -delay 15 -store True -fw 1280 -fh 720 -bw 6 -bh 8 -size 20
+```    
+  
+*对于部分更深入的细节设置可以修改代码*   
+  
+--------------------------------------------------------------------------------  
+  
+  
 ### undistort.py
 > 根据相机内参和畸变向量对原始图像进行去畸变操作  
 
@@ -162,7 +216,7 @@ python undistort.py -h
 *注：具体函数细节可参照openCV官方文档或代码注释*
 
 ## Code Detailed Annotation
-关于fisheye.py的**中文详细代码注释**可以参见[fisheye.ipynb](https://nbviewer.jupyter.org/github/dyfcalid/CameraCalibration/blob/master/fisheye.ipynb)  
+关于intrinsicCalib.ipynb的**中文详细代码注释**可以参见[intrinsicCalib.ipynb](https://nbviewer.jupyter.org/github/dyfcalid/CameraCalibration/blob/master/IntrinsicCalibration/intrinsicCalib.ipynb)  
   
 `2021.4-5 ZZH`  
 
