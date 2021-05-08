@@ -3,50 +3,60 @@
   
 依赖库：opencv、numpy  
 
-使用`intrinsicCalib.py`可以完成相机的**在线标定**和**离线标定**，包含鱼眼相机和普通相机模型，  
+使用`intrinsicCalib.py`可以完成相机的**在线标定**和**离线标定**，包含**鱼眼相机**和**普通相机**模型，  
 同时支持**相机、视频、图像**三种输入，生成相机内参和畸变向量  
-  
-使用`undistort.py`可以便捷地完成图像的**去畸变处理**  
+详细注释包含在`intrinsicCalib.ipynb`中，也可以在Jupyter Notebook中直接运行该代码   
 
 【目录】  
 - [Quick Start](#quick-start)
-  * [fisheye.py](#fisheyepy)
+  * [intrinsicCalib.py](#intrinsicCalib.py)
   * [undistort.py](#undistortpy)
 - [Calibration Principle](#calibration-principle)
 - [Code Detailed Annotation](#code-detailed-annotation)
 
 ## Quick Start
-### fisheye.py 
-> 鱼眼相机标定  
+### intrinsicCalib.py 
+> 相机内参标定  
 
 连接相机后并准备好棋盘标定板后，在命令行运行即可 
 ```
-python fisheye.py
+python intrinsicCalib.py
 ```
-可以通过argparse输入更多参数，使用 '-h' 查看所有参数信息
+可以通过argparse输入更多参数，使用`-h`或`--help` 查看所有参数信息，请**注意各参数的默认值**
 ```
-python fisheye.py -h
+python intrinsicCalib.py -h
 ```
 
-| Argument  | Type | Default | Help                                          | 
-|:----------|:----:|:-------:|:----------------------------------------------|
-| -id       | int  | 1       | Camera ID                                     |
-| -fw       | int  | 1280    | Camera Frame Width                            |
-| -fh       | int  | 720     | Camera Frame Height                           |
-| -bw       | int  | 6       | Chess Board Width (corners number)            |
-| -bh       | int  | 8       | Chess Board Height (corners number)           |
-| -square   | int  | 20      | Chess Board Square Size (mm)                  |
-| -calibrate| int  | 10      | Required Calibration Frame Number             |
-| -delay    | int  | 4       | Find Chessboard Delay (frame number)          |
-| -read     | int  | 10      | Max Read Image Failed Criteria (frame number) |
+| Argument  | Type | Default   | Help                                             | 
+|:----------|:----:|:---------:|:-------------------------------------------------|
+| -input    | str  | camera    | Input Source: camera/video/image                 |
+| -type     | str  | fisheye   | Camera Type: fisheye/normal                      |
+| -id       | int  | 1         | Camera ID                                        |
+| -path     | str  | ./data/   | Input Video/Image Path                           |
+| -video    | str  | video.mp4 | Input Video File Name (eg.: video.mp4)           |
+| -image    | str  | img_raw   | Input Image File Name Prefix (eg.: img_raw)      |
+| -mode     | str  | auto      | Image Select Mode: auto/manual                   |
+| -fw       | int  | 1280      | Camera Frame Width                               |
+| -fh       | int  | 720       | Camera Frame Height                              |
+| -bw       | int  | 9         | Chess Board Width (corners number)               |
+| -bh       | int  | 6         | Chess Board Height (corners number)              |
+| -size     | int  | 10        | Chess Board Square Size (mm)                     |
+| -num      | int  | 5         | Least Required Calibration Frame Number          |
+| -delay    | int  | 8         | Capture Image Time Interval (frame number)       |
+| -store    | bool | False     | Store Captured Images (Ture/False)               |
+| -crop     | bool | False     | Crop Input Video/Image to (fw,fh) (Ture/False)   |
+| -resize   | bool | False     | Resize Input Video/Image to (fw,fh) (Ture/False) |
 
-**示例**： 相机分辨率为1280×720，棋盘格**角点数**为9×6，每小格边长10mm，未输入参数保持默认值，键入
+**示例**： 相机分辨率设置为1280×720，棋盘格**角点数**为6×8，每小格边长20mm，未输入参数保持默认值，键入
 ```
-python fisheye.py -fw 1280 -fh 720 -bw 9 -bh 6 -square 10
+python intrinsicCalib.py -fw 1280 -fh 720 -bw 6 -bh 8 -size 20
 ```
 -------------------------------------------------------------------------------
-程序正常运行，开启相机并读取图像后，会出现`raw_frame`窗口
+**默认设置为相机在线标定**  
+即`-id 1`的相机输入`-input camera`，鱼眼相机模型`-type fisheye`，自动模式`-mode auto`：  
+程序正常运行，开启相机并读取图像后，会出现`raw_frame`窗口  
 - 将相机对准标定板
+- 按下**SPACE键**开始标定
 - 稳定移动相机从多个角度对准棋盘 
 
 当相机找到标定板并采集到一定数量的数据后，会出现`undistort_frame`窗口，此时已完成初步标定，生成去畸变图像
@@ -154,7 +164,7 @@ python undistort.py -h
 ## Code Detailed Annotation
 关于fisheye.py的**中文详细代码注释**可以参见[fisheye.ipynb](https://nbviewer.jupyter.org/github/dyfcalid/CameraCalibration/blob/master/fisheye.ipynb)  
   
-`2021.4 ZZH`  
+`2021.4-5 ZZH`  
 
 [回到顶部](#camera-calibration)
 
