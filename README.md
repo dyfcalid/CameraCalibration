@@ -42,6 +42,7 @@ CameraCalibration
 施工中...  
   
 ## Other Tools  
+用`collect.py`可以开启相机完成图像或视频的**数据采集**  
 用`undistort.py`可以批量完成图像的**去畸变处理**   
 用`homography.py`可以批量完成图像的**单应性变换**，得到鸟瞰图  
    
