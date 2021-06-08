@@ -76,29 +76,29 @@ class Mask:
             self.points = np.array([
                 [0, 0],
                 [BEV_HEIGHT, 0], 
-                [(BEV_WIDTH+CAR_WIDTH)/2, (BEV_HEIGHT-args.CAR_HEIGHT)/2],
-                [(BEV_WIDTH-CAR_WIDTH)/2, (BEV_HEIGHT-args.CAR_HEIGHT)/2]
+                [(BEV_WIDTH+CAR_WIDTH)/2, (BEV_HEIGHT-CAR_HEIGHT)/2],
+                [(BEV_WIDTH-CAR_WIDTH)/2, (BEV_HEIGHT-CAR_HEIGHT)/2]
             ]).astype(np.int32)
         elif name == 'back':
             self.points = np.array([
                 [0, BEV_WIDTH],
                 [BEV_HEIGHT,BEV_WIDTH],
-                [(BEV_WIDTH+CAR_WIDTH)/2, (BEV_HEIGHT+args.CAR_HEIGHT)/2], 
-                [(BEV_WIDTH-CAR_WIDTH)/2, (BEV_HEIGHT+args.CAR_HEIGHT)/2]
+                [(BEV_WIDTH+CAR_WIDTH)/2, (BEV_HEIGHT+CAR_HEIGHT)/2], 
+                [(BEV_WIDTH-CAR_WIDTH)/2, (BEV_HEIGHT+CAR_HEIGHT)/2]
             ]).astype(np.int32)
         elif name == 'left':
             self.points = np.array([
                 [0, 0],
                 [0,BEV_WIDTH], 
-                [(BEV_WIDTH-CAR_WIDTH)/2, (BEV_HEIGHT+args.CAR_HEIGHT)/2],
-                [(BEV_WIDTH-CAR_WIDTH)/2, (BEV_HEIGHT-args.CAR_HEIGHT)/2]
+                [(BEV_WIDTH-CAR_WIDTH)/2, (BEV_HEIGHT+CAR_HEIGHT)/2],
+                [(BEV_WIDTH-CAR_WIDTH)/2, (BEV_HEIGHT-CAR_HEIGHT)/2]
             ]).astype(np.int32)
         elif name == 'right':
             self.points = np.array([
                 [BEV_HEIGHT, 0],
                 [BEV_HEIGHT,BEV_WIDTH], 
-                [(BEV_WIDTH+CAR_WIDTH)/2, (BEV_HEIGHT+args.CAR_HEIGHT)/2], 
-                [(BEV_WIDTH+CAR_WIDTH)/2, (BEV_HEIGHT-args.CAR_HEIGHT)/2]
+                [(BEV_WIDTH+CAR_WIDTH)/2, (BEV_HEIGHT+CAR_HEIGHT)/2], 
+                [(BEV_WIDTH+CAR_WIDTH)/2, (BEV_HEIGHT-CAR_HEIGHT)/2]
             ]).astype(np.int32)
         else:
             raise Exception("name should be front/back/left/right")
