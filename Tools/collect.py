@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import os
 
+# 在这里修改各参数值
 parser = argparse.ArgumentParser(description="Control Camera to Collect Data (Image/Video)")
 parser.add_argument('-type', '--DATA_TYPE', default='image', type=str, help='Collect Data Type: image/video')
 parser.add_argument('-id', '--CAMERA_ID', default=0, type=int, help='Camera ID')
