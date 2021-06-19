@@ -12,20 +12,21 @@ parser.add_argument('-video', '--VIDEO_FILE', default='video.mp4', type=str, hel
 parser.add_argument('-image', '--IMAGE_FILE', default='img_raw', type=str, help='Input Image File Name Prefix (eg.: img_raw)')
 parser.add_argument('-mode', '--SELECT_MODE', default='auto', type=str, help='Image Select Mode: auto/manual')
 parser.add_argument('-fw','--FRAME_WIDTH', default=1280, type=int, help='Camera Frame Width')
-parser.add_argument('-fh','--FRAME_HEIGHT', default=720, type=int, help='Camera Frame Height')
-parser.add_argument('-bw','--BORAD_WIDTH', default=9, type=int, help='Chess Board Width (corners number)')
+parser.add_argument('-fh','--FRAME_HEIGHT', default=1024, type=int, help='Camera Frame Height')
+parser.add_argument('-bw','--BORAD_WIDTH', default=7, type=int, help='Chess Board Width (corners number)')
 parser.add_argument('-bh','--BORAD_HEIGHT', default=6, type=int, help='Chess Board Height (corners number)')
 parser.add_argument('-size','--SQUARE_SIZE', default=10, type=int, help='Chess Board Square Size (mm)')
-parser.add_argument('-num','--CALIBRATE_NUMBER', default=5, type=int, help='Least Required Calibration Frame Number')
-parser.add_argument('-delay','--FRAME_DELAY', default=8, type=int, help='Capture Image Time Interval (frame number)')
-parser.add_argument('-store','--STORE_CAPTURE', default=False, type=bool, help='Store Captured Images (Ture/False)')
-parser.add_argument('-crop','--FRAME_CROP', default=False, type=bool, help='Crop Input Video/Image to (fw,fh) (Ture/False)')
-parser.add_argument('-resize','--FRAME_RESIZE', default=False, type=bool, help='Resize Input Video/Image to (fw,fh) (Ture/False)')
-cfgs = parser.parse_args()
-
-CHESS_BOARD_PATTERN = (cfgs.BORAD_WIDTH, cfgs.BORAD_HEIGHT)
-BOARD = np.array([ [(j * cfgs.SQUARE_SIZE, i * cfgs.SQUARE_SIZE, 0.)]
-                  for i in range(cfgs.BORAD_HEIGHT) for j in range(cfgs.BORAD_WIDTH) ],dtype=np.float32)
+parser.add_argument('-num','--CALIB_NUMBER', default=5, type=int, help='Least Required Calibration Frame Number')
+parser.add_argument('-delay','--FRAME_DELAY', default=12, type=int, help='Capture Image Time Interval (frame number)')
+parser.add_argument('-subpix','--SUBPIX_REGION', default=5, type=int, help='Corners Subpix Optimization Region')
+parser.add_argument('-fps','--CAMERA_FPS', default=20, type=int, help='Camera Frame per Second(FPS)')
+parser.add_argument('-fs', '--FOCAL_SCALE', default=0.5, type=float, help='Camera Undistort Focal Scale')
+parser.add_argument('-ss', '--SIZE_SCALE', default=1, type=float, help='Camera Undistort Size Scale')
+parser.add_argument('-store','--STORE_FLAG', default=False, type=bool, help='Store Captured Images (Ture/False)')
+parser.add_argument('-store_path', '--STORE_PATH', default='./data/', type=str, help='Path to Store Captured Images')
+parser.add_argument('-crop','--CROP_FLAG', default=False, type=bool, help='Crop Input Video/Image to (fw,fh) (Ture/False)')
+parser.add_argument('-resize','--RESIZE_FLAG', default=False, type=bool, help='Resize Input Video/Image to (fw,fh) (Ture/False)')
+args = parser.parse_args()
 
 class CalibData:
     def __init__(self):
@@ -39,33 +40,24 @@ class CalibData:
         self.reproj_err = None
         self.ok = False
 
-class CornerData:
-    def __init__(self, raw_frame):
-        self.raw_frame = raw_frame
-        self.corners = None
-        self.ok = False
-        self.ok, self.corners = cv2.findChessboardCorners(self.raw_frame, CHESS_BOARD_PATTERN,
-                                flags = cv2.CALIB_CB_ADAPTIVE_THRESH|cv2.CALIB_CB_NORMALIZE_IMAGE|cv2.CALIB_CB_FAST_CHECK)
-        if not self.ok: return
-        gray = cv2.cvtColor(self.raw_frame, cv2.COLOR_BGR2GRAY)
-        self.corners = cv2.cornerSubPix(gray, self.corners, (11, 11), (-1, -1),
-                        (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.01))
-        cv2.drawChessboardCorners(self.raw_frame, CHESS_BOARD_PATTERN, self.corners, self.ok)
-
 class Fisheye:
     def __init__(self):
         self.data = CalibData()
         self.inited = False
-
+        self.BOARD = np.array([ [(j * args.SQUARE_SIZE, i * args.SQUARE_SIZE, 0.)]
+                               for i in range(args.BORAD_HEIGHT) 
+                               for j in range(args.BORAD_WIDTH) ],dtype=np.float32)
+        
     def update(self, corners, frame_size):
-        board = [BOARD] * len(corners)
+        board = [self.BOARD] * len(corners)
         if not self.inited:
             self._update_init(board, corners, frame_size)
             self.inited = True
         else:
             self._update_refine(board, corners, frame_size)
         self._calc_reproj_err(corners)
-
+        self._get_undistort_maps()
+    
     def _update_init(self, board, corners, frame_size):
         data = self.data
         data.type = "FISHEYE"
@@ -90,23 +82,42 @@ class Fisheye:
         data = self.data
         data.reproj_err = []
         for i in range(len(corners)):
-            corners_reproj, _ = cv2.fisheye.projectPoints(BOARD, data.rvecs[i], data.tvecs[i], data.camera_mat, data.dist_coeff)
+            corners_reproj, _ = cv2.fisheye.projectPoints(self.BOARD, data.rvecs[i], data.tvecs[i], data.camera_mat, data.dist_coeff)
             err = cv2.norm(corners_reproj, corners[i], cv2.NORM_L2) / len(corners_reproj)
             data.reproj_err.append(err)
+            
+    def _get_camera_mat_dst(self, camera_mat):
+        camera_mat_dst = camera_mat.copy()
+        camera_mat_dst[0][0] *= args.FOCAL_SCALE
+        camera_mat_dst[1][1] *= args.FOCAL_SCALE
+        camera_mat_dst[0][2] = args.FRAME_WIDTH / 2 * args.SIZE_SCALE
+        camera_mat_dst[1][2] = args.FRAME_HEIGHT / 2 * args.SIZE_SCALE
+        return camera_mat_dst
+    
+    def _get_undistort_maps(self):
+        data = self.data
+        camera_mat_dst = self._get_camera_mat_dst(data.camera_mat)
+        data.map1, data.map2 = cv2.fisheye.initUndistortRectifyMap(
+                                 data.camera_mat, data.dist_coeff, np.eye(3, 3), camera_mat_dst, 
+                                 (int(args.FRAME_WIDTH * args.SIZE_SCALE), int(args.FRAME_HEIGHT * args.SIZE_SCALE)), cv2.CV_16SC2)
 
 class Normal:
     def __init__(self):
         self.data = CalibData()
         self.inited = False
+        self.BOARD = np.array([ [(j * args.SQUARE_SIZE, i * args.SQUARE_SIZE, 0.)]
+                               for i in range(args.BORAD_HEIGHT) 
+                               for j in range(args.BORAD_WIDTH) ],dtype=np.float32)
         
     def update(self, corners, frame_size):
-        board = [BOARD] * len(corners)
+        board = [self.BOARD] * len(corners)
         if not self.inited:
             self._update_init(board, corners, frame_size)
             self.inited = True
         else:
             self._update_refine(board, corners, frame_size)
         self._calc_reproj_err(corners)
+        self._get_undistort_maps()
         
     def _update_init(self, board, corners, frame_size):
         data = self.data
@@ -131,179 +142,276 @@ class Normal:
         data = self.data
         data.reproj_err = []
         for i in range(len(corners)):
-            corners_reproj, _ = cv2.projectPoints(BOARD, data.rvecs[i], data.tvecs[i], data.camera_mat, data.dist_coeff)
+            corners_reproj, _ = cv2.projectPoints(self.BOARD, data.rvecs[i], data.tvecs[i], data.camera_mat, data.dist_coeff)
             err = cv2.norm(corners_reproj, corners[i], cv2.NORM_L2) / len(corners_reproj)
             data.reproj_err.append(err)
+            
+    def _get_camera_mat_dst(self, camera_mat):
+        camera_mat_dst = camera_mat.copy()
+        camera_mat_dst[0][0] *= args.FOCAL_SCALE
+        camera_mat_dst[1][1] *= args.FOCAL_SCALE
+        camera_mat_dst[0][2] = args.FRAME_WIDTH / 2 * args.SIZE_SCALE
+        camera_mat_dst[1][2] = args.FRAME_HEIGHT / 2 * args.SIZE_SCALE
+        return camera_mat_dst
+    
+    def _get_undistort_maps(self):
+        data = self.data
+        camera_mat_dst = self._get_camera_mat_dst(data.camera_mat)
+        data.map1, data.map2 = cv2.initUndistortRectifyMap(
+                                 data.camera_mat, data.dist_coeff, np.eye(3, 3), camera_mat_dst, 
+                                 (int(args.FRAME_WIDTH * args.SIZE_SCALE), int(args.FRAME_HEIGHT * args.SIZE_SCALE)), cv2.CV_16SC2)
 
-class History:
-    def __init__(self):
+class InCalibrator:
+    def __init__(self, camera):
+        if camera == 'fisheye':
+            self.camera = Fisheye()
+        elif camera == 'normal':
+            self.camera = Normal()
+        else:
+            raise Exception("camera should be fisheye/normal")
         self.corners = []
-        self.updated = False
-    def append(self, current):
-        if not current.ok: return
-        self.corners.append(current.corners)
-        self.updated = True
-    def removei(self, i):
-        if not 0 <= i < len(self): return
-        del self.corners[i]
-        self.updated = True
-    def __len__(self):
-        return len(self.corners)
-    def get_corners(self):
-        self.updated = False
-        return self.corners
-
-class Flags:
-    def __init__(self):
-        self.READ_FAIL_CTR = 0
-        self.frame_id = 0
-        self.ready = False
-
-def main():
-    flags = Flags()                                                              
-    history = History()                                                          
     
-    if cfgs.CAMERA_TYPE == 'fisheye':
-        camera = Fisheye()                                                      
-    elif cfgs.CAMERA_TYPE == 'normal':
-        camera = Normal()                                                       
-    else:
-        raise Exception("CAMERA TYPE should be fisheye or normal")
+    def get_corners(self, img):
+        ok, corners = cv2.findChessboardCorners(img, (args.BORAD_WIDTH, args.BORAD_HEIGHT),
+                      flags = cv2.CALIB_CB_ADAPTIVE_THRESH|cv2.CALIB_CB_NORMALIZE_IMAGE|cv2.CALIB_CB_FAST_CHECK)
+        if ok: 
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            corners = cv2.cornerSubPix(gray, corners, (args.SUBPIX_REGION, args.SUBPIX_REGION), (-1, -1),
+                                       (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.01))
+        return ok, corners
     
-    if cfgs.INPUT_TYPE == 'camera':                                              
-        cap = cv2.VideoCapture(cfgs.CAMERA_ID)                                   
-        if not cap.isOpened(): 
-            raise Exception("camera {} open failed".format(cfgs.CAMERA_ID))      
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, cfgs.FRAME_WIDTH)                      
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, cfgs.FRAME_HEIGHT)
-    elif cfgs.INPUT_TYPE == 'video':                                             
-        cap = cv2.VideoCapture(cfgs.INPUT_PATH + cfgs.VIDEO_FILE)                
-        if not cap.isOpened(): 
-            raise Exception("from {} read video failed".format(cfgs.INPUT_PATH + cfgs.VIDEO_FILE))
-    elif cfgs.INPUT_TYPE == 'image':                                             
-        filePath = [os.path.join(cfgs.INPUT_PATH, x) for x in os.listdir(cfgs.INPUT_PATH) 
-                    if any(x.endswith(extension) for extension in ['.png', '.jpg', '.jpeg', '.PNG', '.JPG', '.JPEG'])
-                   ]                                                             
-        filenames = [filename for filename in filePath if cfgs.IMAGE_FILE in filename] 
-        if len(filenames) == 0:
-            raise Exception("from {} read images failed".format(cfgs.INPUT_PATH))
-    else:
-        raise Exception("INPUT TYPE should be camera, video or image")
-        
-    if cfgs.INPUT_TYPE == 'image':                                                
+    def draw_corners(self, img):
+        ok, corners = self.get_corners(img)
+        cv2.drawChessboardCorners(img, (args.BORAD_WIDTH, args.BORAD_HEIGHT), corners, ok)
+        return img
+    
+    def undistort(self, img):
+        data = self.camera.data
+        return cv2.remap(img, data.map1, data.map2, cv2.INTER_LINEAR)
+    
+    def calibrate(self, img):
+        if len(self.corners) >= args.CALIB_NUMBER:
+            self.camera.update(self.corners, img.shape[1::-1])
+        return self.camera.data
+    
+    def __call__(self, raw_frame):
+        ok, corners = self.get_corners(raw_frame)
+        result = self.camera.data
+        if ok:
+            self.corners.append(corners)
+            result = self.calibrate(raw_frame)
+        return result
+
+def centerCrop(img,width,height):
+    if img.shape[1] < width or img.shape[0] < height:
+        raise Exception("CROP size should be smaller than original size")
+    img = img[round((img.shape[0]-height)/2) : round((img.shape[0]-height)/2)+height,
+              round((img.shape[1]-width)/2) : round((img.shape[1]-width)/2)+width ]  
+    return img
+
+def get_images(PATH, NAME):
+    filePath = [os.path.join(PATH, x) for x in os.listdir(PATH) 
+                if any(x.endswith(extension) for extension in ['.png', '.jpg', '.jpeg', '.PNG', '.JPG', '.JPEG'])
+               ]                                                            # 得到给定路径下所有图片文件
+    filenames = [filename for filename in filePath if NAME in filename]     # 再筛选出包含给定名字的图片
+    if len(filenames) == 0:
+        raise Exception("from {} read images failed".format(PATH))
+    return filenames
+
+class CalibMode():
+    def __init__(self, calibrator, input_type, mode):
+        self.calibrator = calibrator
+        self.input_type = input_type
+        self.mode = mode
+    
+    def imgPreprocess(self, img):
+        if args.CROP_FLAG:
+            img = centerCrop(img, args.FRAME_WIDTH, args.FRAME_HEIGHT)
+        elif args.RESIZE_FLAG:
+            img = cv2.resize(img, (args.FRAME_WIDTH, args.FRAME_HEIGHT))
+        return img
+    
+    def setCamera(self, cap):
+        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('M','J','P','G'))
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, args.FRAME_WIDTH)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, args.FRAME_HEIGHT)
+        cap.set(cv2.CAP_PROP_FPS, args.CAMERA_FPS)
+        return cap
+    
+    # 运行标定程序
+    def runCalib(self, raw_frame, display_raw=True, display_undist=True):
+        calibrator = self.calibrator
+        raw_frame = self.imgPreprocess(raw_frame)
+        result = calibrator(raw_frame)
+        raw_frame = calibrator.draw_corners(raw_frame)
+        if display_raw:
+            cv2.namedWindow("raw_frame", flags = cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
+            cv2.imshow("raw_frame", raw_frame)
+        if len(calibrator.corners) > args.CALIB_NUMBER and display_undist: 
+            undist_frame = calibrator.undistort(raw_frame)
+            cv2.namedWindow("undist_frame", flags = cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
+            cv2.imshow("undist_frame", undist_frame)   
+        cv2.waitKey(1)
+        return result
+    
+    def imageAutoMode(self):
+        calibrator = self.calibrator
+        filenames = get_images(args.INPUT_PATH, args.IMAGE_FILE)
         for filename in filenames:
             print(filename)
             raw_frame = cv2.imread(filename)
-            if cfgs.FRAME_CROP:
-                if raw_frame.shape[1]-cfgs.FRAME_WIDTH < 0 or raw_frame.shape[0]-cfgs.FRAME_HEIGHT < 0:
-                    raise Exception("CROP size should be smaller than original size")
-                raw_frame = raw_frame[
-                    round((raw_frame.shape[0]-cfgs.FRAME_HEIGHT)/2):round((raw_frame.shape[0]-cfgs.FRAME_HEIGHT)/2)+cfgs.FRAME_HEIGHT,
-                    round((raw_frame.shape[1]-cfgs.FRAME_WIDTH)/2):round((raw_frame.shape[1]-cfgs.FRAME_WIDTH)/2)+cfgs.FRAME_WIDTH ]           
-            elif cfgs.FRAME_RESIZE:
-                raw_frame = cv2.resize(raw_frame, (cfgs.FRAME_WIDTH, cfgs.FRAME_HEIGHT))
-            current = CornerData(raw_frame)                                       
+            result = self.runCalib(raw_frame)
+            key = cv2.waitKey(1)
+            if key == 27: break
+        cv2.destroyAllWindows() 
+        return result
+    
+    def imageManualMode(self):
+        filenames = get_images(args.INPUT_PATH, args.IMAGE_FILE)
+        for filename in filenames:
+            print(filename)
+            raw_frame = cv2.imread(filename)
+            raw_frame = self.imgPreprocess(raw_frame)
+            img = raw_frame.copy()
+            img = self.calibrator.draw_corners(img)
             display = "raw_frame: press SPACE to SELECT, other key to SKIP, press ESC to QUIT"
             cv2.namedWindow(display, flags = cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
-            cv2.imshow(display, raw_frame)
-            if len(history) > cfgs.CALIBRATE_NUMBER:                              
-                undist_frame = cv2.remap(raw_frame, calib.map1, calib.map2, cv2.INTER_LINEAR)
-                cv2.namedWindow("undist_frame", flags = cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
-                cv2.imshow("undist_frame", undist_frame)                          
+            cv2.imshow(display, img)
+            key = cv2.waitKey(0)
+            if key == 32:
+                result = self.runCalib(raw_frame, display_raw = False)
+            if key == 27: break
+        cv2.destroyAllWindows() 
+        return result
+    
+    def videoAutoMode(self):
+        cap = cv2.VideoCapture(args.INPUT_PATH + args.VIDEO_FILE)
+        if not cap.isOpened(): 
+            raise Exception("from {} read video failed".format(args.INPUT_PATH + args.VIDEO_FILE))
+        frame_id = 0
+        while True:
             key = cv2.waitKey(1)
-            if cfgs.SELECT_MODE == 'manual':                                      
-                key = cv2.waitKey(0)
-            if key == 32 or cfgs.SELECT_MODE == 'auto':
-                history.append(current)                                           
-                if len(history) >= cfgs.CALIBRATE_NUMBER:                         
-                    camera.update(history.get_corners(), raw_frame.shape[1::-1])  
-                    calib = camera.data                                                
-                    if cfgs.CAMERA_TYPE == 'fisheye':                             
-                        calib.map1, calib.map2 = cv2.fisheye.initUndistortRectifyMap(
-                            calib.camera_mat, calib.dist_coeff, np.eye(3, 3), calib.camera_mat, raw_frame.shape[1::-1], cv2.CV_16SC2)
-                    else:
-                        calib.map1, calib.map2 = cv2.initUndistortRectifyMap(
-                            calib.camera_mat, calib.dist_coeff, np.eye(3, 3), calib.camera_mat, raw_frame.shape[1::-1], cv2.CV_16SC2)
-            if key == 27: break                                                   
-    else:
-        while True:                                                               
-            key = cv2.waitKey(1)                                                  
-            ok, raw_frame = cap.read()                                            
-            if not ok:
-                if cfgs.INPUT_TYPE == 'video': break
-                flags.READ_FAIL_CTR += 1
-                if flags.READ_FAIL_CTR >= 20:                                     
-                    raise Exception("video read failed")
-            else:
-                flags.READ_FAIL_CTR = 0
-                flags.frame_id += 1
-                
-            if cfgs.FRAME_CROP:
-                if raw_frame.shape[1]-cfgs.FRAME_WIDTH < 0 or raw_frame.shape[0]-cfgs.FRAME_HEIGHT < 0:
-                    raise Exception("CROP size should be smaller than original size")
-                raw_frame = raw_frame[
-                    round((raw_frame.shape[0]-cfgs.FRAME_HEIGHT)/2):round((raw_frame.shape[0]-cfgs.FRAME_HEIGHT)/2)+cfgs.FRAME_HEIGHT,
-                    round((raw_frame.shape[1]-cfgs.FRAME_WIDTH)/2):round((raw_frame.shape[1]-cfgs.FRAME_WIDTH)/2)+cfgs.FRAME_WIDTH ]           
-            elif cfgs.FRAME_RESIZE:
-                raw_frame = cv2.resize(raw_frame, (cfgs.FRAME_WIDTH, cfgs.FRAME_HEIGHT))
-            
-            if key == 32 or (cfgs.INPUT_TYPE == 'video' and cfgs.SELECT_MODE == 'auto'):
-                flags.ready = True                                                
-            
-            if cfgs.SELECT_MODE == 'auto' and flags.ready and flags.frame_id % cfgs.FRAME_DELAY == 0:  
-                if cfgs.STORE_CAPTURE:
-                    cv2.imwrite('./data/img_raw{}.jpg'.format(len(history)),raw_frame)
-                current = CornerData(raw_frame)                                   
-                history.append(current)                                           
-                print(len(history))                                               
-
-            if cfgs.SELECT_MODE == 'manual' and key == 32:                        
-                if cfgs.STORE_CAPTURE:
-                    cv2.imwrite('./data/img_raw{}.jpg'.format(len(history)),raw_frame)
-                current = CornerData(raw_frame)                                 
-                history.append(current)                                          
-                print(len(history))                                              
-                
-            if flags.ready and len(history) >= cfgs.CALIBRATE_NUMBER and history.updated:   
-                camera.update(history.get_corners(), raw_frame.shape[1::-1])    
-                calib = camera.data                                                      
-                if cfgs.CAMERA_TYPE == 'fisheye':                               
-                    calib.map1, calib.map2 = cv2.fisheye.initUndistortRectifyMap(
-                        calib.camera_mat, calib.dist_coeff, np.eye(3, 3), calib.camera_mat, raw_frame.shape[1::-1], cv2.CV_16SC2)
-                else:
-                    calib.map1, calib.map2 = cv2.initUndistortRectifyMap(
-                        calib.camera_mat, calib.dist_coeff, np.eye(3, 3), calib.camera_mat, raw_frame.shape[1::-1], cv2.CV_16SC2)
-
-            if flags.ready and len(history) >= cfgs.CALIBRATE_NUMBER:
-                undist_frame = cv2.remap(raw_frame, calib.map1, calib.map2, cv2.INTER_LINEAR); 
-                cv2.namedWindow("undist_frame", flags = cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
-                cv2.imshow("undist_frame", undist_frame)                        
-            
-            if cfgs.SELECT_MODE == 'manual':
-                display = "raw_frame: press SPACE to capture image"
-            elif cfgs.INPUT_TYPE == 'camera':
-                display = "raw_frame: press SPACE to start calibration"
-            else:
-                display = "raw_frame"
+            ok, raw_frame = cap.read()
+            raw_frame = self.imgPreprocess(raw_frame)
+            if frame_id % args.FRAME_DELAY == 0:
+                if args.STORE_FLAG:
+                    cv2.imwrite(args.STORE_PATH + 'img_raw{}.jpg'.format(len(self.calibrator.corners)), raw_frame)
+                result = self.runCalib(raw_frame) 
+                print(len(self.calibrator.corners))
+            frame_id += 1 
+            key = cv2.waitKey(1)
+            if key == 27: break
+        cap.release()
+        cv2.destroyAllWindows() 
+        return result
+    
+    def videoManualMode(self):
+        cap = cv2.VideoCapture(args.INPUT_PATH + args.VIDEO_FILE)
+        if not cap.isOpened(): 
+            raise Exception("from {} read video failed".format(args.INPUT_PATH + args.VIDEO_FILE))
+        while True:
+            key = cv2.waitKey(1)
+            ok, raw_frame = cap.read()
+            raw_frame = self.imgPreprocess(raw_frame)
+            display = "raw_frame: press SPACE to capture image"
             cv2.namedWindow(display, flags = cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
             cv2.imshow(display, raw_frame)
-            if key == 27: break                                                 
-            
+            if key == 32:
+                if args.STORE_FLAG:
+                    cv2.imwrite(args.STORE_PATH + 'img_raw{}.jpg'.format(len(self.calibrator.corners)), raw_frame)
+                result = self.runCalib(raw_frame) 
+                print(len(self.calibrator.corners))
+            if key == 27: break
         cap.release()
-        
-    cv2.destroyAllWindows() 
+        cv2.destroyAllWindows() 
+        return result
     
-    if len(history) == 0:
+    def cameraAutoMode(self):
+        cap = cv2.VideoCapture(args.CAMERA_ID)
+        if not cap.isOpened(): 
+            raise Exception("from {} read video failed".format(args.CAMERA_ID))
+        cap = self.setCamera(cap)
+        frame_id = 0
+        start_flag = False
+        while True:
+            key = cv2.waitKey(1)
+            ok, raw_frame = cap.read()
+            raw_frame = self.imgPreprocess(raw_frame)
+            if key == 32: start_flag = True
+            if key == 27: break
+            if not start_flag:
+                cv2.putText(raw_frame, 'press SPACE to start!', (args.FRAME_WIDTH//4,args.FRAME_HEIGHT//2), 
+                             cv2.FONT_HERSHEY_COMPLEX, 1.5, (0,0,255), 2)
+                cv2.imshow("raw_frame", raw_frame)
+                continue
+            if frame_id % args.FRAME_DELAY == 0:
+                if args.STORE_FLAG:
+                    cv2.imwrite(args.STORE_PATH + 'img_raw{}.jpg'.format(len(self.calibrator.corners)), raw_frame)
+                result = self.runCalib(raw_frame) 
+                print(len(self.calibrator.corners))
+            frame_id += 1 
+        cap.release()
+        cv2.destroyAllWindows() 
+        return result
+    
+    def cameraManualMode(self):
+        cap = cv2.VideoCapture(args.CAMERA_ID)
+        if not cap.isOpened(): 
+            raise Exception("from {} read video failed".format(args.CAMERA_ID))
+        cap = self.setCamera(cap)
+        frame_id = 0
+        while True:
+            key = cv2.waitKey(1)
+            ok, raw_frame = cap.read()
+            raw_frame = self.imgPreprocess(raw_frame)
+            display = "raw_frame: press SPACE to capture image"
+            cv2.namedWindow(display, flags = cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
+            cv2.imshow(display, raw_frame)
+            if key == 32:
+                if args.STORE_FLAG:
+                    cv2.imwrite(args.STORE_PATH + 'img_raw{}.jpg'.format(len(self.calibrator.corners)), raw_frame)
+                result = self.runCalib(raw_frame) 
+                print(len(self.calibrator.corners))
+            if key == 27: break
+        cap.release()
+        cv2.destroyAllWindows() 
+        return result
+
+    def __call__(self):
+        input_type = self.input_type
+        mode = self.mode
+        if input_type == 'image' and mode == 'auto':
+            result = self.imageAutoMode()
+        if input_type == 'image' and mode == 'manual':
+            result = self.imageManualMode()
+        if input_type == 'video' and mode == 'auto':
+            result = self.videoAutoMode()
+        if input_type == 'video' and mode == 'manual':
+            result = self.videoManualMode()
+        if input_type == 'camera' and mode == 'auto':
+            result = self.cameraAutoMode()
+        if input_type == 'camera' and mode == 'manual':
+            result = self.cameraManualMode()
+        return result
+
+
+def main():
+    calibrator = InCalibrator(args.CAMERA_TYPE)
+    calib = CalibMode(calibrator, args.INPUT_TYPE, args.SELECT_MODE)
+    result = calib()
+                  
+    if len(calibrator.corners) == 0: 
         raise Exception("Calibration failed. Chessboard not found, check the parameters")  
-    if len(history) < cfgs.CALIBRATE_NUMBER:
-        raise Exception("Warning: Calibration images are not enough. At least {} images are needed.".format(cfgs.CALIBRATE_NUMBER))           
+    if len(calibrator.corners) < args.CALIB_NUMBER:
+        raise Exception("Warning: Calibration images are not enough. At least {} valid images are needed.".format(args.CALIB_NUMBER))            
 
     print("Calibration Complete")
-    print("Camera Matrix is : {}".format(camera.data.camera_mat.tolist()))               
-    print("Distortion Coefficient is : {}".format(camera.data.dist_coeff.tolist()))      
-    print("Reprojection Error is : {}".format(np.mean(camera.data.reproj_err)))          
-    np.save('camera_{}_K.npy'.format(cfgs.CAMERA_ID),camera.data.camera_mat.tolist())
-    np.save('camera_{}_D.npy'.format(cfgs.CAMERA_ID),camera.data.dist_coeff.tolist())
-    
+    print("Camera Matrix is : {}".format(result.camera_mat.tolist())) 
+    print("Distortion Coefficient is : {}".format(result.dist_coeff.tolist()))
+    print("Reprojection Error is : {}".format(np.mean(result.reproj_err))) 
+    np.save('camera_{}_K.npy'.format(args.CAMERA_ID),result.camera_mat.tolist())
+    np.save('camera_{}_D.npy'.format(args.CAMERA_ID),result.dist_coeff.tolist())
+        
 if __name__ == '__main__':
     main()
+

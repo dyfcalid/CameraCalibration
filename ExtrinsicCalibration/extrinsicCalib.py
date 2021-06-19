@@ -180,13 +180,13 @@ class ExCalibrator():
         return self.homography    
 
 def get_images(PATH, NAME):
-        filePath = [os.path.join(PATH, x) for x in os.listdir(PATH) 
-                    if any(x.endswith(extension) for extension in ['.png', '.jpg', '.jpeg', '.PNG', '.JPG', '.JPEG'])
-                   ]
-        filenames = [filename for filename in filePath if NAME in filename]
-        if len(filenames) == 0:
-            raise Exception("from {} read images failed".format(PATH))
-        return filenames
+    filePath = [os.path.join(PATH, x) for x in os.listdir(PATH)
+                if any(x.endswith(extension) for extension in ['.png', '.jpg', '.jpeg', '.PNG', '.JPG', '.JPEG'])
+               ]
+    filenames = [filename for filename in filePath if NAME in filename]
+    if len(filenames) == 0:
+        raise Exception("from {} read images failed".format(PATH))
+    return filenames
     
 def main():
     srcfiles = get_images(args.INPUT_PATH, args.SOURCE_IMAGE)
