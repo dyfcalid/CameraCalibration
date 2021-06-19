@@ -20,8 +20,6 @@ parser.add_argument('-store_path', '--STORE_PATH', default='./data/', type=str, 
 parser.add_argument('-factor','--CORNER_FACTOR', default=1, type=float, help='Find Chess Board Corner Factor')
 args = parser.parse_args()
 
-CHESS_BOARD_PATTERN = (args.BORAD_WIDTH, args.BORAD_HEIGHT)
-
 class CenterImage:
     def __init__(self):
         self.x = 0
@@ -152,14 +150,14 @@ class ExCalibrator():
         return img
         
     def get_corners(self, img, subpix, draw=False):
-        ok, corners = cv2.findChessboardCorners(img, CHESS_BOARD_PATTERN,
+        ok, corners = cv2.findChessboardCorners(img, (args.BORAD_WIDTH, args.BORAD_HEIGHT),
                       flags = cv2.CALIB_CB_ADAPTIVE_THRESH|cv2.CALIB_CB_NORMALIZE_IMAGE)
         if ok: 
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             corners = cv2.cornerSubPix(gray, corners, (subpix, subpix), (-1, -1),
                                        (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.01))
         if draw:
-            cv2.drawChessboardCorners(img, CHESS_BOARD_PATTERN, corners, ok)
+            cv2.drawChessboardCorners(img, (args.BORAD_WIDTH, args.BORAD_HEIGHT), corners, ok)
         return ok, corners
     
     def warp(self):
@@ -210,6 +208,8 @@ def main():
             cv2.imwrite(args.STORE_PATH + 'img_dst{}.jpg'.format(i), dst_raw)  
 
         homography = exCalib(src_raw, dst_raw)
+        print("Homography Matrix is:")
+        print(homography.tolist())
         np.save('camera_{}_H.npy'.format(args.CAMERA_ID), homography)
 
         src_warp = exCalib.warp()
