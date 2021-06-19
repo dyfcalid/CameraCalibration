@@ -6,36 +6,36 @@ import os
 parser = argparse.ArgumentParser(description="Homography from Source to Destination Image")
 parser.add_argument('-id', '--CAMERA_ID', default=1, type=int, help='Camera ID')
 parser.add_argument('-path', '--INPUT_PATH', default='./data/', type=str, help='Input Source/Destination Image Path')
-parser.add_argument('-fw','--FRAME_WIDTH', default=1280, type=int, help='Camera Frame Width')
-parser.add_argument('-fh','--FRAME_HEIGHT', default=720, type=int, help='Camera Frame Height')
-parser.add_argument('-bw','--BORAD_WIDTH', default=9, type=int, help='Chess Board Width (corners number)')
+parser.add_argument('-bw','--BORAD_WIDTH', default=7, type=int, help='Chess Board Width (corners number)')
 parser.add_argument('-bh','--BORAD_HEIGHT', default=6, type=int, help='Chess Board Height (corners number)')
-parser.add_argument('-src', '--SOURCE_IMAGE', default='img_src', type=str, help='Source Image File Name Prefix (eg.: img_src)')
-parser.add_argument('-dst', '--DEST_IMAGE', default='img_dst', type=str, help='Destionation Image File Name Prefix (eg.: img_dst)')
-parser.add_argument('-size','--SCALED_SIZE', default=15, type=int, help='Scaled Chess Board Square Size (image pixel)')
-parser.add_argument('-center','--CENTER_FLAG', default=True, type=bool, help='Center Image Manually (Ture/False)')
-parser.add_argument('-scale','--SCALE_FLAG', default=True, type=bool, help='Scale Image to Fix Board Size (Ture/False)')
-parser.add_argument('-store','--STORE_IMAGE', default=False, type=bool, help='Store Centerd/Scaled Images (Ture/False)')
-cfgs = parser.parse_args()
+parser.add_argument('-src', '--SOURCE_IMAGE', default='img_src', type=str, help='Source Image File Name Prefix (eg.:img_src)')
+parser.add_argument('-dst', '--DEST_IMAGE', default='img_dst', type=str, help='Destionation Image File Name Prefix (eg.:img_dst)')
+parser.add_argument('-size','--SCALED_SIZE', default=10, type=int, help='Scaled Chess Board Square Size (image pixel)')
+parser.add_argument('-subpix_s','--SUBPIX_REGION_SRC', default=3, type=int, help='Corners Subpix Region of img_src')
+parser.add_argument('-subpix_d','--SUBPIX_REGION_DST', default=3, type=int, help='Corners Subpix Region of img_dst')
+parser.add_argument('-center','--CENTER_FLAG', default=False, type=bool, help='Center Image Manually (Ture/False)')
+parser.add_argument('-scale','--SCALE_FLAG', default=False, type=bool, help='Scale Image to Fix Board Size (Ture/False)')
+parser.add_argument('-store','--STORE_FLAG', default=False, type=bool, help='Store Centerd/Scaled Images (Ture/False)')
+parser.add_argument('-store_path', '--STORE_PATH', default='./data/', type=str, help='Path to Store Centerd/Scaled Images')
+parser.add_argument('-factor','--CORNER_FACTOR', default=1, type=float, help='Find Chess Board Corner Factor')
+args = parser.parse_args()
 
-CHESS_BOARD_PATTERN = (cfgs.BORAD_WIDTH, cfgs.BORAD_HEIGHT)
+CHESS_BOARD_PATTERN = (args.BORAD_WIDTH, args.BORAD_HEIGHT)
 
 class CenterImage:
-    def __init__(self, raw_frame):
-        self.raw_frame = raw_frame
+    def __init__(self):
         self.x = 0
         self.y = 0
-        self.param = {'tl': None, 'br': None, 'current_pos': None,'complete': False} 
+        self.param = {'tl': None, 'br': None, 'current_pos': None,'complete': False}
         self.display = "CLICK image center and press Y/N to validate, ESC to stay original"
-        self._operate()
-    
-    def _mouse(self, event, x, y, flags, param):
+
+    def mouse(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
             img = self.raw_frame.copy()
             param['current_pos'] = (x, y)
             if param['tl'] is None:
                 param['tl'] = param['current_pos'] 
-        if event == cv2.EVENT_MOUSEMOVE and param['tl'] is not None and not param['complete']: 
+        if event == cv2.EVENT_MOUSEMOVE and param['tl'] is not None and not param['complete']:
             img = self.raw_frame.copy()
             param['current_pos'] = (x, y)
             cv2.rectangle(img, param['tl'], param['current_pos'], (0, 0, 255))
@@ -54,16 +54,17 @@ class CenterImage:
             cv2.imshow(self.display, img)
         self.param = param
         
-    def _translate(self, img):
+    def translate(self, img):
         shift_x = img.shape[1] // 2 - self.x
         shift_y = img.shape[0] // 2 - self.y
         M = np.float32([[1,0,shift_x],[0,1,shift_y]])
         img_dst = cv2.warpAffine(img,M,img.shape[1::-1])
         return img_dst
         
-    def _operate(self):   
-        cv2.namedWindow(self.display)
-        cv2.setMouseCallback(self.display, self._mouse, self.param)
+    def __call__(self, raw_frame):   
+        self.raw_frame = raw_frame
+        cv2.namedWindow(self.display, flags = cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
+        cv2.setMouseCallback(self.display, self.mouse, self.param)
         while True:
             cv2.imshow(self.display, self.raw_frame)
             key = cv2.waitKey(0)
@@ -82,127 +83,149 @@ class CenterImage:
                 break
         cv2.destroyAllWindows()
         if not (self.x == 0 and self.y == 0):
-            self.raw_frame = self._translate(self.raw_frame)
+            return self.translate(self.raw_frame)
+        else:
+            return self.raw_frame
 
 class ScaleImage:
-    def __init__(self, raw_frame, corners):        
-        self.raw_frame = raw_frame
-        self._calc_dist(corners)
-        self.scale_factor = cfgs.SCALED_SIZE / self.dist_square
-        self._operate()
-
-    def _calc_dist(self,corners):
+    def __init__(self, corners):        
+        self.calc_dist(corners)
+        print('scale image from {} to {}'.format(self.dist_square,args.SCALED_SIZE))
+        self.scale_factor = args.SCALED_SIZE / self.dist_square
+        
+    def calc_dist(self, corners):
         dist_total = 0
-        for i in range(cfgs.BORAD_HEIGHT):
-            dist = cv2.norm(corners[i * cfgs.BORAD_WIDTH,:], corners[(i+1) * cfgs.BORAD_WIDTH-1,:], cv2.NORM_L2)
-            dist_total += dist / cfgs.BORAD_WIDTH
-        self.dist_square = dist_total / cfgs.BORAD_HEIGHT
+        for i in range(args.BORAD_HEIGHT):
+            dist = cv2.norm(corners[i * args.BORAD_WIDTH,:], corners[(i+1) * args.BORAD_WIDTH-1,:], cv2.NORM_L2)
+            dist_total += dist / (args.BORAD_WIDTH - 1)
+        self.dist_square = dist_total / args.BORAD_HEIGHT
+
+    def padding(self, img, width, height):
+        H = img.shape[0]
+        W = img.shape[1]
+        top = (height - H) // 2 
+        bottom = (height - H) // 2 
+        if top + bottom + H < height:
+            bottom += 1
+        left = (width - W) // 2 
+        right = (width - W) // 2 
+        if left + right + W < width:
+            right += 1
+        return cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value = (0,0,0))  
+
+    def crop(self, img, width, height):
+        H = img.shape[0]
+        W = img.shape[1]
+        top = (H - height) // 2
+        bottom = (H - height) // 2 + height
+        left = (W - width) // 2
+        right = (W - width) // 2 + width
+        return img[top:bottom, left:right]          
     
-    def _operate(self):
-        self.raw_frame = cv2.resize(self.raw_frame, (0,0), fx=self.scale_factor, fy=self.scale_factor)
-        H = self.raw_frame.shape[0]
-        W = self.raw_frame.shape[1]
-        if self.scale_factor < 1:      
-            top = (cfgs.FRAME_HEIGHT - H) // 2 
-            bottom = (cfgs.FRAME_HEIGHT - H) // 2 
-            if top + bottom + H < cfgs.FRAME_HEIGHT:
-                bottom += 1
-            left = (cfgs.FRAME_WIDTH - W) // 2 
-            right = (cfgs.FRAME_WIDTH - W) // 2 
-            if left + right + W < cfgs.FRAME_WIDTH:
-                right += 1
-            self.raw_frame = cv2.copyMakeBorder(self.raw_frame, top, bottom, left, right, cv2.BORDER_CONSTANT, value = (0,0,0))
+    def __call__(self, raw_frame):
+        width = raw_frame.shape[1]
+        height = raw_frame.shape[0]
+        raw_frame = cv2.resize(raw_frame, (0,0), fx=self.scale_factor, fy=self.scale_factor)  # 图像缩放
+        if self.scale_factor < 1:
+            raw_frame = self.padding(raw_frame, width, height)
         else:                     
-            top = (H - cfgs.FRAME_HEIGHT) // 2
-            bottom = (H - cfgs.FRAME_HEIGHT) //2 + cfgs.FRAME_HEIGHT
-            left = (W - cfgs.FRAME_WIDTH) // 2
-            right = (W - cfgs.FRAME_WIDTH) // 2 + cfgs.FRAME_WIDTH
-            self.raw_frame = self.raw_frame[top:bottom, left:right]
+            raw_frame = self.crop(raw_frame, width, height)
+        return raw_frame
 
+class ExCalibrator():
+    def __init__(self):
+        self.src_corners_total = np.empty([0,1,2])
+        self.dst_corners_total = np.empty([0,1,2])
+        
+    def imgPreprocess(self, img, center, scale):
+        if center:
+            centerImg = CenterImage()
+            img = centerImg(img)
+        if scale:
+            ok, corners = self.get_corners(img, subpix = args.SUBPIX_REGION_DST)
+            if not ok:
+                raise Exception("failed to find corners in destination image")
+            scaleImg = ScaleImage(corners)
+            img = scaleImg(img)
+        cv2.imshow("Preprocessed Image", img)
+        cv2.waitKey(0)
+        return img
+        
+    def get_corners(self, img, subpix, draw=False):
+        ok, corners = cv2.findChessboardCorners(img, CHESS_BOARD_PATTERN,
+                      flags = cv2.CALIB_CB_ADAPTIVE_THRESH|cv2.CALIB_CB_NORMALIZE_IMAGE)
+        if ok: 
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            corners = cv2.cornerSubPix(gray, corners, (subpix, subpix), (-1, -1),
+                                       (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.01))
+        if draw:
+            cv2.drawChessboardCorners(img, CHESS_BOARD_PATTERN, corners, ok)
+        return ok, corners
+    
+    def warp(self):
+        src_warp = cv2.warpPerspective(self.src_img, self.homography, 
+                                       (self.dst_img.shape[1], self.dst_img.shape[0])) 
+        return src_warp
+        
+    def __call__(self, src_img, dst_img):
+        ok, dst_corners = self.get_corners(dst_img, subpix = args.SUBPIX_REGION_DST, draw=True)
+        if not ok:
+            raise Exception("failed to find corners in destination image")
+        ok, src_corners = self.get_corners(src_img, subpix = args.SUBPIX_REGION_SRC, draw=True)
+        if not ok:
+            raise Exception("failed to find corners in source image")
+        self.dst_corners_total = np.append(self.dst_corners_total, dst_corners, axis = 0)
+        self.src_corners_total = np.append(self.src_corners_total, src_corners, axis = 0)
+        self.homography, _ = cv2.findHomography(self.src_corners_total, self.dst_corners_total,method = cv2.RANSAC)
+        self.src_img = src_img
+        self.dst_img = dst_img
+        return self.homography    
+
+def get_images(PATH, NAME):
+        filePath = [os.path.join(PATH, x) for x in os.listdir(PATH) 
+                    if any(x.endswith(extension) for extension in ['.png', '.jpg', '.jpeg', '.PNG', '.JPG', '.JPEG'])
+                   ]
+        filenames = [filename for filename in filePath if NAME in filename]
+        if len(filenames) == 0:
+            raise Exception("from {} read images failed".format(PATH))
+        return filenames
+    
 def main():
-    srcFilePath = [os.path.join(cfgs.INPUT_PATH, x) for x in os.listdir(cfgs.INPUT_PATH) 
-                if any(x.endswith(extension) for extension in ['.png', '.jpg', '.jpeg', '.PNG', '.JPG', '.JPEG'])
-               ]                                                                       
-    srcfiles = [srcfile for srcfile in srcFilePath if cfgs.SOURCE_IMAGE in srcfile] 
-    if len(srcfiles) == 0:
-        raise Exception("from {} read source images failed".format(cfgs.INPUT_PATH))
-
-    dstFilePath = [os.path.join(cfgs.INPUT_PATH, x) for x in os.listdir(cfgs.INPUT_PATH) 
-                if any(x.endswith(extension) for extension in ['.png', '.jpg', '.jpeg', '.PNG', '.JPG', '.JPEG'])
-               ]                                                                      
-    dstfiles = [dstfile for dstfile in dstFilePath if cfgs.DEST_IMAGE in dstfile] 
-    if len(dstfiles) == 0:
-        raise Exception("from {} read destination images failed".format(cfgs.INPUT_PATH))
-
+    srcfiles = get_images(args.INPUT_PATH, args.SOURCE_IMAGE)
+    dstfiles = get_images(args.INPUT_PATH, args.DEST_IMAGE)  
     if len(srcfiles) != len(dstfiles):
         raise Exception("numbers of source and destination images should be equal")
     
-    src_corners_total = np.empty([0,1,2])
-    dst_corners_total = np.empty([0,1,2])
+    exCalib = ExCalibrator()
+
     for i in range(len(srcfiles)):    
         src_raw = cv2.imread(srcfiles[i])
         dst_raw = cv2.imread(dstfiles[i])
         print(srcfiles[i])
         print(dstfiles[i])
+
+        if args.CENTER_FLAG or args.SCALE_FLAG:
+            dst_raw = exCalib.imgPreprocess(dst_raw, args.CENTER_FLAG, args.SCALE_FLAG)
+        if args.STORE_FLAG:
+            cv2.imwrite(args.STORE_PATH + 'img_dst{}.jpg'.format(i), dst_raw)  
+
+        homography = exCalib(src_raw, dst_raw)
+        np.save('camera_{}_H.npy'.format(args.CAMERA_ID), homography)
+
+        src_warp = exCalib.warp()
         
-        ret2, dst_corners = cv2.findChessboardCorners(dst_raw, CHESS_BOARD_PATTERN,
-                                                      flags = cv2.CALIB_CB_ADAPTIVE_THRESH|cv2.CALIB_CB_NORMALIZE_IMAGE|cv2.CALIB_CB_FAST_CHECK)
-        if not ret2:
-            raise Exception("failed to find corners in destination image")
-        dst_gray = cv2.cvtColor(dst_raw, cv2.COLOR_BGR2GRAY)
-        dst_corners = cv2.cornerSubPix(dst_gray, dst_corners, (11, 11), (-1, -1), (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 0.01))
-
-        if cfgs.CENTER_FLAG:
-            centerImg = CenterImage(dst_raw)
-            dst_raw = centerImg.raw_frame
-            cv2.imshow("Centered Image", dst_raw)
-            key = cv2.waitKey(0)
-            cv2.destroyAllWindows()
-        if cfgs.SCALE_FLAG:
-            scaleImg = ScaleImage(dst_raw, dst_corners)
-            dst_raw = scaleImg.raw_frame 
-            cv2.imshow("Scaled Image", dst_raw)
-            key = cv2.waitKey(0)
-            cv2.destroyAllWindows()  
-        if cfgs.STORE_IMAGE:
-            cv2.imwrite('./data/img_dst{}.jpg'.format(i), dst_raw)
+        cv2.namedWindow("Source View", flags = cv2.WINDOW_NORMAL|cv2.WINDOW_KEEPRATIO)
+        cv2.imshow("Source View", src_raw)
+        cv2.namedWindow("Destination View", flags = cv2.WINDOW_NORMAL|cv2.WINDOW_KEEPRATIO)
+        cv2.imshow("Destination View", dst_raw)
+        cv2.namedWindow("Warped Source View", flags = cv2.WINDOW_NORMAL|cv2.WINDOW_KEEPRATIO)
+        cv2.imshow("Warped Source View", src_warp)
         
-        ret1, src_corners = cv2.findChessboardCorners(src_raw, CHESS_BOARD_PATTERN,
-                                                      flags = cv2.CALIB_CB_ADAPTIVE_THRESH|cv2.CALIB_CB_NORMALIZE_IMAGE|cv2.CALIB_CB_FAST_CHECK)
-        if not ret1:
-            raise Exception("failed to find corners in source image")
-        src_gray = cv2.cvtColor(src_raw, cv2.COLOR_BGR2GRAY)
-        src_corners = cv2.cornerSubPix(src_gray, src_corners, (11, 11), (-1, -1), (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 0.01))
-        src_img = cv2.drawChessboardCorners(src_raw, CHESS_BOARD_PATTERN, src_corners, ret1)
-
-        ret2, dst_corners = cv2.findChessboardCorners(dst_raw, CHESS_BOARD_PATTERN,
-                                                      flags = cv2.CALIB_CB_ADAPTIVE_THRESH|cv2.CALIB_CB_NORMALIZE_IMAGE|cv2.CALIB_CB_FAST_CHECK)
-        if not ret2:
-            raise Exception("failed to find corners in destination image")
-        dst_gray = cv2.cvtColor(dst_raw, cv2.COLOR_BGR2GRAY)
-        dst_corners = cv2.cornerSubPix(dst_gray, dst_corners, (11, 11), (-1, -1), (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 0.01)) 
-        dst_img = cv2.drawChessboardCorners(dst_raw, CHESS_BOARD_PATTERN, dst_corners, ret2)
-
-        src_corners_total = np.append(src_corners_total, src_corners, axis = 0)
-        dst_corners_total = np.append(dst_corners_total, dst_corners, axis = 0)
-
-        homography, _ = cv2.findHomography(src_corners_total, dst_corners_total, method = cv2.RANSAC)
-        print("Homography Matrix is: ") 
-        print(homography)
-        
-        np.save('camera_{}_homography.npy'.format(cfgs.CAMERA_ID),homography)
-        
-        src_warp = cv2.warpPerspective(src_raw, homography, (src_raw.shape[1], src_raw.shape[0]))
-
-        img_draw_warp = cv2.hconcat([src_raw, dst_raw, src_warp])
-        cv2.namedWindow("Source View / Destination View / Warped Source View", flags = cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
-        cv2.imshow("Source View / Destination View / Warped Source View", img_draw_warp )
-
         while True:
             key = cv2.waitKey(0)
             if key == 27: break
         cv2.destroyAllWindows()
-    
-           
+
+
 if __name__ == '__main__':
     main()    
