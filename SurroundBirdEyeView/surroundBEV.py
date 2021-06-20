@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import argparse
+import os
 
 parser = argparse.ArgumentParser(description="Generate Surrounding Camera Bird Eye View")
 parser.add_argument('-fw', '--FRAME_WIDTH', default=1280, type=int, help='Camera Frame Width')
@@ -77,9 +78,9 @@ def luminance_balance(images):
 
 class Camera:
     def __init__(self, name):
-        self.camera_mat = np.load('./data/{}/camera_{}_K.npy'.format(name,name))
-        self.dist_coeff = np.load('./data/{}/camera_{}_D.npy'.format(name,name))
-        self.homography = np.load('./data/{}/camera_{}_H.npy'.format(name,name))
+        self.camera_mat = np.load(os.path.dirname(__file__) + '/data/{}/camera_{}_K.npy'.format(name,name))
+        self.dist_coeff = np.load(os.path.dirname(__file__) + '/data/{}/camera_{}_D.npy'.format(name,name))
+        self.homography = np.load(os.path.dirname(__file__) + '/data/{}/camera_{}_H.npy'.format(name,name))
         self.camera_mat_dst = self.get_camera_mat_dst()
         self.undistort_maps = self.get_undistort_maps()
         self.bev_maps = self.get_bev_maps()
@@ -96,7 +97,7 @@ class Camera:
         undistort_maps = cv2.fisheye.initUndistortRectifyMap(
                     self.camera_mat, self.dist_coeff, 
                     np.eye(3, 3), self.camera_mat_dst,
-                    (FRAME_WIDTH * SIZE_SCALE, FRAME_HEIGHT * SIZE_SCALE), cv2.CV_16SC2)
+                    (int(FRAME_WIDTH * SIZE_SCALE), int(FRAME_HEIGHT * SIZE_SCALE)), cv2.CV_16SC2)
         return undistort_maps
     
     def get_bev_maps(self):
@@ -278,6 +279,7 @@ class BlendMask:
     
 class BevGenerator:
     def __init__(self, blend=False, balence=False):
+        self.init_args()
         self.cameras = [Camera('front'), Camera('back'), 
                         Camera('left'), Camera('right')]
         self.blend = blend
@@ -287,8 +289,29 @@ class BevGenerator:
                           Mask('left'), Mask('right')]
         else:
             self.masks = [BlendMask('front'), BlendMask('back'), 
-                      BlendMask('left'), BlendMask('right')]    
-        
+                      BlendMask('left'), BlendMask('right')]
+
+    @staticmethod
+    def get_args():
+        return args
+
+    @staticmethod
+    def edit_args(new_args):
+        global args
+        args = new_args
+
+    def init_args(self):
+        global FRAME_WIDTH, FRAME_HEIGHT, BEV_WIDTH, BEV_HEIGHT
+        global CAR_WIDTH, CAR_HEIGHT, FOCAL_SCALE, SIZE_SCALE
+        FRAME_WIDTH = args.FRAME_WIDTH
+        FRAME_HEIGHT = args.FRAME_HEIGHT
+        BEV_WIDTH = args.BEV_WIDTH
+        BEV_HEIGHT = args.BEV_HEIGHT
+        CAR_WIDTH = args.CAR_WIDTH
+        CAR_HEIGHT = args.CAR_HEIGHT
+        FOCAL_SCALE = args.FOCAL_SCALE
+        SIZE_SCALE = args.SIZE_SCALE
+
     def __call__(self, front, back, left, right, car = None):
         images = [front,back,left,right]
         if self.balence:
