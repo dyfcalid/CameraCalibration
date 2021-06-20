@@ -3,10 +3,10 @@
 > 各代码文件均可单独使用，此外也提供了外部API接口以供调用  
   
 ## DEMO
-[DEMO](demo.gif)
+![DEMO](demo.gif)
 
 ## Quick Start
-克隆该仓库，运行main.py快速查看结果
+克隆该仓库，运行main.py查看简单示例结果  
 确保已经安装好**opencv(>=3.4.2)** 以及**numpy(>=1.19.2)** 
 ```
 git clone https://github.com/dyfcalid/CameraCalibration.git
