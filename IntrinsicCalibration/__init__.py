@@ -1,5 +1,4 @@
 from .intrinsicCalib import InCalibrator, CalibMode
-from .intrinsicCalib import getInCalibArgs, editInCalibArgs
 
 """
 Intrinsic Calibration
@@ -19,11 +18,10 @@ or
     calib = CalibMode(calibrator, input_type, mode)
     result = calib()
     
-you can edit parameters in the original file, or
+You can edit parameters in the original file, or
 
-    from intrinsicCalib import getInCalibArgs, editInCalibArgs
-    
-    InCalibArgs = getInCalibArgs()
-    InCalibArgs.INPUT_PATH = './IntrinsicCalibration/data/'
-    editInCalibArgs(InCalibArgs)
+    args = InCalibrator.get_args()
+    args.INPUT_PATH = './IntrinsicCalibration/data/'
+    InCalibrator.edit_args(args)
+    calibrator = InCalibrator(camera_type)
 """

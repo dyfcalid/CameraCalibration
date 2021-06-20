@@ -28,12 +28,6 @@ parser.add_argument('-crop','--CROP_FLAG', default=False, type=bool, help='Crop 
 parser.add_argument('-resize','--RESIZE_FLAG', default=False, type=bool, help='Resize Input Video/Image to (fw,fh) (Ture/False)')
 args = parser.parse_args()
 
-def getInCalibArgs():
-    return args
-
-def editInCalibArgs(new_args):
-    global args
-    args = new_args
 
 class CalibData:
     def __init__(self):
@@ -177,7 +171,16 @@ class InCalibrator:
         else:
             raise Exception("camera should be fisheye/normal")
         self.corners = []
-    
+
+    @staticmethod
+    def get_args():
+        return args
+
+    @staticmethod
+    def edit_args(new_args):
+        global args
+        args = new_args
+
     def get_corners(self, img):
         ok, corners = cv2.findChessboardCorners(img, (args.BORAD_WIDTH, args.BORAD_HEIGHT),
                       flags = cv2.CALIB_CB_ADAPTIVE_THRESH|cv2.CALIB_CB_NORMALIZE_IMAGE|cv2.CALIB_CB_FAST_CHECK)
@@ -244,8 +247,7 @@ class CalibMode():
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, args.FRAME_HEIGHT)
         cap.set(cv2.CAP_PROP_FPS, args.CAMERA_FPS)
         return cap
-    
-    # 运行标定程序
+
     def runCalib(self, raw_frame, display_raw=True, display_undist=True):
         calibrator = self.calibrator
         raw_frame = self.imgPreprocess(raw_frame)
@@ -262,7 +264,6 @@ class CalibMode():
         return result
     
     def imageAutoMode(self):
-        calibrator = self.calibrator
         filenames = get_images(args.INPUT_PATH, args.IMAGE_FILE)
         for filename in filenames:
             print(filename)
@@ -297,7 +298,6 @@ class CalibMode():
             raise Exception("from {} read video failed".format(args.INPUT_PATH + args.VIDEO_FILE))
         frame_id = 0
         while True:
-            key = cv2.waitKey(1)
             ok, raw_frame = cap.read()
             raw_frame = self.imgPreprocess(raw_frame)
             if frame_id % args.FRAME_DELAY == 0:
@@ -366,7 +366,6 @@ class CalibMode():
         if not cap.isOpened(): 
             raise Exception("from {} read video failed".format(args.CAMERA_ID))
         cap = self.setCamera(cap)
-        frame_id = 0
         while True:
             key = cv2.waitKey(1)
             ok, raw_frame = cap.read()

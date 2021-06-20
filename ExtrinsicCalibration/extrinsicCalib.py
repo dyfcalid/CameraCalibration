@@ -111,7 +111,7 @@ class ScaleImage:
             right += 1
         return cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value = (0,0,0))  
 
-    def crop(self, img, width, height):
+    def center_crop(self, img, width, height):
         H = img.shape[0]
         W = img.shape[1]
         top = (H - height) // 2
@@ -127,14 +127,23 @@ class ScaleImage:
         if self.scale_factor < 1:
             raw_frame = self.padding(raw_frame, width, height)
         else:                     
-            raw_frame = self.crop(raw_frame, width, height)
+            raw_frame = self.center_crop(raw_frame, width, height)
         return raw_frame
 
 class ExCalibrator():
     def __init__(self):
         self.src_corners_total = np.empty([0,1,2])
         self.dst_corners_total = np.empty([0,1,2])
-        
+
+    @staticmethod
+    def get_args():
+        return args
+
+    @staticmethod
+    def edit_args(new_args):
+        global args
+        args = new_args
+
     def imgPreprocess(self, img, center, scale):
         if center:
             centerImg = CenterImage()

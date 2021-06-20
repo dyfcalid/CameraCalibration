@@ -3,10 +3,9 @@ import os
 import numpy as np
 from ExtrinsicCalibration import ExCalibrator
 from IntrinsicCalibration import InCalibrator, CalibMode
-from IntrinsicCalibration import getInCalibArgs, editInCalibArgs
 
 
-def testInCalib_1():
+def runInCalib_1():
     calibrator = InCalibrator('fisheye')
     PATH = './IntrinsicCalibration/data/'
     images = os.listdir(PATH)
@@ -26,11 +25,10 @@ def testInCalib_1():
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-def testInCalib_2():
-    InCalibArgs = getInCalibArgs()
-    InCalibArgs.INPUT_PATH = './IntrinsicCalibration/data/'
-    editInCalibArgs(InCalibArgs)
-
+def runInCalib_2():
+    args = InCalibrator.get_args()
+    args.INPUT_PATH = './IntrinsicCalibration/data/'
+    InCalibrator.edit_args(args)
     calibrator = InCalibrator('fisheye')
     calib = CalibMode(calibrator, 'image', 'auto')
     result = calib()
@@ -46,7 +44,7 @@ def testInCalib_2():
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-def testExCalib():
+def runExCalib():
     exCalib = ExCalibrator()
 
     src_raw = cv2.imread('./ExtrinsicCalibration/data/img_src_back.jpg')
@@ -69,9 +67,9 @@ def testExCalib():
 
 
 def main():
-    testInCalib_1()
-    # testInCalib_2()
-    testExCalib()
+    # runInCalib_1()
+    runInCalib_2()
+    runExCalib()
 
 
 if __name__ == '__main__':
