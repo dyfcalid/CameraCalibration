@@ -28,6 +28,13 @@ parser.add_argument('-crop','--CROP_FLAG', default=False, type=bool, help='Crop 
 parser.add_argument('-resize','--RESIZE_FLAG', default=False, type=bool, help='Resize Input Video/Image to (fw,fh) (Ture/False)')
 args = parser.parse_args()
 
+def getInCalibArgs():
+    return args
+
+def editInCalibArgs(new_args):
+    global args
+    args = new_args
+
 class CalibData:
     def __init__(self):
         self.type = None
@@ -212,8 +219,8 @@ def centerCrop(img,width,height):
 def get_images(PATH, NAME):
     filePath = [os.path.join(PATH, x) for x in os.listdir(PATH) 
                 if any(x.endswith(extension) for extension in ['.png', '.jpg', '.jpeg', '.PNG', '.JPG', '.JPEG'])
-               ]                                                            # 得到给定路径下所有图片文件
-    filenames = [filename for filename in filePath if NAME in filename]     # 再筛选出包含给定名字的图片
+               ]
+    filenames = [filename for filename in filePath if NAME in filename]
     if len(filenames) == 0:
         raise Exception("from {} read images failed".format(PATH))
     return filenames

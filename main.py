@@ -1,5 +1,50 @@
 import cv2
+import os
+import numpy as np
 from ExtrinsicCalibration import ExCalibrator
+from IntrinsicCalibration import InCalibrator, CalibMode
+from IntrinsicCalibration import getInCalibArgs, editInCalibArgs
+
+
+def testInCalib_1():
+    calibrator = InCalibrator('fisheye')
+    PATH = './IntrinsicCalibration/data/'
+    images = os.listdir(PATH)
+    for img in images:
+        print(PATH + img)
+        raw_frame = cv2.imread(PATH + img)
+        result = calibrator(raw_frame)
+
+    print("Camera Matrix is : {}".format(result.camera_mat.tolist()))
+    print("Distortion Coefficient is : {}".format(result.dist_coeff.tolist()))
+    print("Reprojection Error is : {}".format(np.mean(result.reproj_err)))
+
+    raw_frame = cv2.imread('./IntrinsicCalibration/data/img_raw0.jpg')
+    cv2.imshow("Raw Image", raw_frame)
+    undist_img = calibrator.undistort(raw_frame)
+    cv2.imshow("Undistorted Image", undist_img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+def testInCalib_2():
+    InCalibArgs = getInCalibArgs()
+    InCalibArgs.INPUT_PATH = './IntrinsicCalibration/data/'
+    editInCalibArgs(InCalibArgs)
+
+    calibrator = InCalibrator('fisheye')
+    calib = CalibMode(calibrator, 'image', 'auto')
+    result = calib()
+
+    print("Camera Matrix is : {}".format(result.camera_mat.tolist()))
+    print("Distortion Coefficient is : {}".format(result.dist_coeff.tolist()))
+    print("Reprojection Error is : {}".format(np.mean(result.reproj_err)))
+
+    raw_frame = cv2.imread('./IntrinsicCalibration/data/img_raw0.jpg')
+    cv2.imshow("Raw Image", raw_frame)
+    undist_img = calibrator.undistort(raw_frame)
+    cv2.imshow("Undistort Image", undist_img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 def testExCalib():
     exCalib = ExCalibrator()
@@ -19,14 +64,13 @@ def testExCalib():
     cv2.imshow("Destination View", dst_raw)
     cv2.namedWindow("Warped Source View", flags=cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
     cv2.imshow("Warped Source View", src_warp)
-
-    while True:
-        key = cv2.waitKey(0)
-        if key == 27: break
+    cv2.waitKey(0)
     cv2.destroyAllWindows()
 
 
 def main():
+    testInCalib_1()
+    # testInCalib_2()
     testExCalib()
 
 
