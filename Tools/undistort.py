@@ -23,7 +23,7 @@ parser.add_argument('-name', default=None, type=str, help='Save Image Name')
 args = parser.parse_args()
 
 def main():
-    # 可以直接赋值相机内参和畸变向量或加载npy文件
+    # 可以直接赋值相机内参和畸变向量或加载npy文件，需要手动将上面的args.load改为False
     if not args.load:
         camera_mat = np.array([[350.4931893001142, 0.0, 647.6297467576265], 
                                [0.0, 352.43072872484805, 513.5196785119657], 
