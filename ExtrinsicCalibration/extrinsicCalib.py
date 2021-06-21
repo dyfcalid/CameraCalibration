@@ -17,7 +17,6 @@ parser.add_argument('-center','--CENTER_FLAG', default=False, type=bool, help='C
 parser.add_argument('-scale','--SCALE_FLAG', default=False, type=bool, help='Scale Image to Fix Board Size (Ture/False)')
 parser.add_argument('-store','--STORE_FLAG', default=False, type=bool, help='Store Centerd/Scaled Images (Ture/False)')
 parser.add_argument('-store_path', '--STORE_PATH', default='./data/', type=str, help='Path to Store Centerd/Scaled Images')
-parser.add_argument('-factor','--CORNER_FACTOR', default=1, type=float, help='Find Chess Board Corner Factor')
 args = parser.parse_args()
 
 class CenterImage:

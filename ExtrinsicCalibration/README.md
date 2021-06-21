@@ -1,25 +1,34 @@
 # Camera Extrinsic Calibration
 > 相机外参标定
   
-依赖库：opencv、numpy  
-
 使用`extrinsicCalib.py`可以完成相机的**外参标定**，实现**任意两个视图（包含相同标定板）的转换**，生成**单应性变换矩阵**   
-  
+(可以利用Tool中的`decomposeH.py`得到旋转平移矩阵RT)  
 详细注释包含在`extrinsicCalib.ipynb`中，也可以在Jupyter Notebook中直接运行该代码   
+  
+## Requirement
+opencv(>=3.4.2) numpy(>=1.19.2)  
+  
 ## Background
 
 基于**无人机相机**和**车载环视相机**同时拍摄地面的标定板，进行车载相机的**外参标定**，  
 生成车载相机至无人机相机的**单应性变换矩阵**，实现**鸟瞰图**的转换（即将车载相机视角转换至无人机视角）  
 
 ## Work Flow    
-- 将标定板放置在地面上  
-- 由两个固定的不同位置、视角的相机（车载相机和无人机相机）进行拍摄（确保标定板完整）  
-- 每次移动标定板得到一组对应图像，重复多次  
+- 将标定板放置在地面上并固定  
+- 由固定的不同位置、视角的相机（如四个车载相机和无人机相机）拍摄标定板（确保标定板清晰完整）  
+- *移动标定板并拍摄得到更多组对应图像（非必需）* （各相机至少有一组图像即可完成标定） 
 - 根据相机各自的内参标定进行图片的去畸变预处理  
 - 两个相机的对应图像分别为源图像(img_src)和目标图像(img_dst)  
-- 用extrinsicCalib.py生成单应性矩阵，实现转换    
-- 无人机尽可能保持不动，依次完成车上各相机的标定（程序可以对图像进行平移和缩放以减小误差） 
+- 分别对各组对应图像用extrinsicCalib.py实现转换，保存生成的单应性矩阵H，用于后续的拼接    
   
+注：尽可能使用**多个标定板**摆在车辆周围，使无人机只进行**一次拍摄**，推荐使用**至少四个**相同标定板（前后左右各一）；  
+保证光线环境和标定板距离，确保标定板在环视相机中清晰且**易于检测角点**；  
+各相机都需要先标定好内参，见`intrinsicCalib.py`，若**更改内参则需重新标定外参**；  
+去畸变预处理时选择合适的**焦距和尺寸缩放系数**，确保**合适的视野**（决定四个相机的共视重叠区域）以及**利于角点检测**（标定板在图中的大小）；  
+选择合适的**相机分辨率**与最终**鸟瞰图的尺寸**，决定最终的**精度**（大分辨率易于角点检测且精度较高）和**速度**（转换的实时性），需要做出权衡；  
+尽量保持无人机的稳定，程序可以对图像进行平移和缩放以确保鸟瞰图的统一并减小误差，具体见后续部分讲解。  
+  
+
 ## Quick Start
 ### extrinsicCalib.py 
 > 相机外参标定  
@@ -34,25 +43,26 @@ python extrinsicCalib.py
 python extrinsicCalib.py -h
 ```
 
-| Argument  | Type | Default   | Help                                              | 
-|:----------|:----:|:---------:|:--------------------------------------------------|
-| -id       | int  | 1         | Camera ID                                         |
-| -path     | str  | ./data/   | Input Video/Image Path                            |
-| -fw       | int  | 1280      | Camera Frame Width                                |
-| -fh       | int  | 720       | Camera Frame Height                               |
-| -bw       | int  | 9         | Chess Board Width (corners number)                |
-| -bh       | int  | 6         | Chess Board Height (corners number)               |
-| -src      | str  | img_src   | Source Image File Name Prefix (eg.: img_src)      |
-| -dst      | str  | img_dst   | Destionation Image File Name Prefix (eg.: img_dst)|
-| -size     | int  | 15        | Scaled Chess Board Square Size (image pixel)      |
-| -center   | bool | True      | Center Image Manually (Ture/False)                |
-| -scale    | bool | True      | Scale Image to Fix Board Size (Ture/False)        |
-| -store    | bool | False     | Store Centerd/Scaled Images (Ture/False)          |
-   
+| Argument   | Type | Default   | Help                                              | 备注           |
+|:-----------|:----:|:---------:|:--------------------------------------------------| :--------------|
+| -id        | int  | 1         | Camera ID                                         | 相机编号       |
+| -path      | str  | ./data/   | Input Video/Image Path                            | 输入图片路径   |
+| -bw        | int  | 7         | Chess Board Width (corners number)                | 棋盘格宽度（内角点数）|
+| -bh        | int  | 6         | Chess Board Height (corners number)               | 棋盘格高度（内角点数）|
+| -src       | str  | img_src   | Source Image File Name Prefix (eg.: img_src)      | 源图像文件名前缀 |
+| -dst       | str  | img_dst   | Destionation Image File Name Prefix (eg.: img_dst)| 目标图像文件名前缀|
+| -size      | int  | 10        | Scaled Chess Board Square Size (image pixel)      | 缩放后棋盘每小格边长占据图中的像素尺寸|
+| -subpix_s  | int  | 3         | Corners Subpix Region of img_src                  | 源图像亚像素优化的搜索像素范围|
+| -subpix_d  | int  | 3         | Corners Subpix Region of img_dst                  | 目标图像亚像素优化的搜索像素范围|
+| -center    | bool | False     | Center Image Manually (Ture/False)                | 是否对目标图像进行居中|
+| -scale     | bool | False     | Scale Image to Fix Board Size (Ture/False)        | 是否对目标图像进行缩放|
+| -store     | bool | False     | Store Centerd/Scaled Images (Ture/False)          | 是否储存目标图像（居中缩放后）|
+| -store_path| str  | ./data/   | Path to Store Centerd/Scaled Images               | 储存路径       |  
+  
 -----------------------------------------------------------------------------------  
   
-程序会将`-path`下的所有包含`-src`和`-dst`内容的图片都读入，按照顺序一一进行转换  
-当`-center`和`-scale`都设置为True时，会对目标图像即img_dst进行图像居中和缩放  
+程序会将`-path`下的所有包含`-src`和`-dst`内容名字的图片都读入，按照顺序一一进行转换  
+当`-center`和`-scale`设置为True时，会对目标图像即img_dst进行图像居中和缩放  
   
 图像居中时：  
 - 可以直接**点击**车辆中心  
@@ -62,15 +72,25 @@ python extrinsicCalib.py -h
   
 图像缩放时：  
 - 程序会首先对目标图像img_dst中提取角点坐标，并计算棋盘的小格子平均尺寸  
-- 根据设置的`-size`值（即为最终标定板棋盘格在图中的像素长度，注意此参数与intrinsicCalib.py含义不同）  
-计算缩放系数对图像进行缩放，保证所有目标图像的标定板在图中的像素尺寸一致（即无人机的高度一致） 
+- 根据设置的`-size`值（即为最终标定板棋盘小格在图中的像素长度，注意此参数与intrinsicCalib.py含义不同）  
+计算缩放系数对图像进行缩放，保证所有目标图像的标定板在图中的像素尺寸一致（即无人机的高度一致），并可以以此计算**比例尺** 
 - 对缩放后的图像进行裁剪或边沿填充  
 - 显示缩放后的图像，ESC关闭  
   
 每读入一组图像，程序就会进行一次单应性矩阵计算（总数据量不断累加），并显示变换的效果图   
-
   
-`2021.5 ZZH`  
-
+-----------------------------------------------------------------------------------  
+  
+特别对于车载环视相机外参标定：  
+- 为了确保最终鸟瞰图的拼接效果，尽量使用多个标定板（至少四个）和同一张无人机图像  
+- 对于无人机图像需要手动预处理，利用图片工具**旋转**至车头位于正前方并保持**垂直**，之后将其**裁剪**至最终鸟瞰图要求的**比例**，**调整图片大小**至最终鸟瞰图的尺寸
+（此时这张无人机图像也就是理想的转换鸟瞰图拼接的参考图片）  
+- 先将无人机图片使用该代码进行**居中和缩放并保存**，即将`-center` `-scale` `-store`设置为`True`，得到正式标定的目标图像img_dst
+- 为保证拼接效果只进行**一次**居中缩放操作，**复制四份**之后统一用该张图片标定，对于图中的四个标定板可以用图片工具涂抹遮住其中三个
+- 对四个环视原始图像进行去畸变处理，适当缩小焦距以增大视野，保证相机间的共视区域，为了提高角点检测率和精度，可以适当增大尺寸  
+- 对于检测不到角点的图像，可以利用图片工具手动调整其**曝光、对比度**等等，最重要的是在**图片采集时就保证良好的光线环境、合适的距离、合适的相机分辨率**，可以在采集图像时用intrinsicCalib.py进行测试，在去畸变时也要选择**合适的焦距尺寸缩放系数**。  
+- 将四组相机和无人机图片分别运行该程序得到对应的计算单应性矩阵H并存储 
+  
+`2021.6 ZZH`  
   
   
