@@ -1,11 +1,13 @@
 # Camera Intrinsic Calibration
 > 相机内参在线标定
   
-依赖库：opencv、numpy  
-
+Requirement： opencv(>=3.4.2) numpy(>=1.19.2)  
+  
 使用`intrinsicCalib.py`可以完成相机的**在线标定**和**离线标定**，包含**鱼眼相机**和**普通相机**模型，  
 同时支持**相机、视频、图像**三种输入，生成**相机内参**和**畸变向量**  
 详细注释包含在`intrinsicCalib.ipynb`中，也可以在Jupyter Notebook中直接运行该代码   
+可以根据得到的相机内参和畸变向量文件用Tools中的`undistort.py`完成图像去畸变处理  
+  
 
 【目录】  
 - [Quick Start](#quick-start)
@@ -14,7 +16,6 @@
     + 离线标定
     + 手动模式
     + 更多设置
-  * [undistort.py](#undistortpy)
 - [Calibration Principle](#calibration-principle)
 - [Code Detailed Annotation](#code-detailed-annotation)
 

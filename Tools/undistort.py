@@ -14,7 +14,7 @@ parser.add_argument('-path_k', default='./data/camera_0_K.npy', type=str, help='
 parser.add_argument('-path_d', default='./data/camera_0_D.npy', type=str, help='Camera D File Path')
 parser.add_argument('-focalscale', default=1, type=float, help='Camera Undistortion Focal Scale')
 parser.add_argument('-sizescale', default=1, type=float, help='Camera Undistortion Size Scale')
-parser.add_argument('-offset_h', default=0, type=float, help='Horizonal Offset of Optical Axis')
+parser.add_argument('-offset_h', default=0, type=float, help='Horizontal Offset of Optical Axis')
 parser.add_argument('-offset_v', default=0, type=float, help='Vertical Offset of Optical Axis')
 parser.add_argument('-srcformat', default='jpg', type=str, help='Original Image Format (jpg/png)')
 parser.add_argument('-dstformat', default='jpg', type=str, help='Final Image Format (jpg/png)')
@@ -60,6 +60,7 @@ def main():
     index = 1
     for filename in filenames:
         if filename[-4:] == '.' + args.srcformat:
+        # if filename == 'img_src.jpg':          # 只对某张图片去畸变时可以使用这行代码
             print(filename)
             img = cv2.imread(args.path_read + filename)
             img = cv2.remap(img, map1, map2, cv2.INTER_LINEAR)

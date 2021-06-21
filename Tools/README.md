@@ -31,6 +31,7 @@ python collect.py -type image -id 1 -fw 1280 -fh 1024
 ```
 linux下推荐使用`cv2.VideoCapture(f"/dev/video{id}")`代替`cv2.VideoCapture(id)`读取相机图片  
   
+--------------------------------------------------------------------------------  
   
 ## undistort.py  
 > 根据相机内参和畸变向量对原始图像进行去畸变操作  
@@ -68,7 +69,8 @@ python undistort.py -h
  python undistort.py -width 1280 -height 720 -load True -srcformat png -dstformat jpg -name undist_img -quality 95
 ```
 该脚本文件路径下所有符合`-srcformat`格式的图片均会进行去畸变处理并生成新图片
-
+如果只对单张特定图片进行去畸变操作，可以修改代码（已在代码中注释）
+  
 --------------------------------------------------------------------------------  
   
 ## decomposeH.py   

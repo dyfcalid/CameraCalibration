@@ -81,7 +81,7 @@ def runBEV():
     args.CAR_HEIGHT = 350
     BevGenerator.edit_args(args)                        # 修改为新的参数
 
-    bev = BevGenerator(blend=True, balence=True)        # 初始化环视鸟瞰图生成器
+    bev = BevGenerator(blend=True, balance=True)        # 初始化环视鸟瞰图生成器
     surround = bev(front, back, left, right)            # 输入前后左右四张原始相机图像 得到拼接后的鸟瞰图
 
     cv2.namedWindow('surround', flags=cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)

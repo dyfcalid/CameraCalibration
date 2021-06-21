@@ -12,6 +12,8 @@ parser.add_argument('-cw', '--CAR_WIDTH', default=250, type=int, help='Car Frame
 parser.add_argument('-ch', '--CAR_HEIGHT', default=400, type=int, help='Car Frame Height')
 parser.add_argument('-fs', '--FOCAL_SCALE', default=1, type=float, help='Camera Undistort Focal Scale')
 parser.add_argument('-ss', '--SIZE_SCALE', default=2, type=float, help='Camera Undistort Size Scale')
+parser.add_argument('-blend','--BLEND_FLAG', default=False, type=bool, help='Blend BEV Image (Ture/False)')
+parser.add_argument('-balance','--BALANCE_FLAG', default=False, type=bool, help='Balance BEV Image (Ture/False)')
 args = parser.parse_args()
 
 FRAME_WIDTH = args.FRAME_WIDTH
@@ -278,12 +280,12 @@ class BlendMask:
         return (img * self.weight).astype(np.uint8)    
     
 class BevGenerator:
-    def __init__(self, blend=False, balence=False):
+    def __init__(self, blend=args.BLEND_FLAG, balance=args.BALANCE_FLAG):
         self.init_args()
         self.cameras = [Camera('front'), Camera('back'), 
                         Camera('left'), Camera('right')]
         self.blend = blend
-        self.balence = balence
+        self.balance = balance
         if not self.blend:
             self.masks = [Mask('front'), Mask('back'), 
                           Mask('left'), Mask('right')]
@@ -314,14 +316,14 @@ class BevGenerator:
 
     def __call__(self, front, back, left, right, car = None):
         images = [front,back,left,right]
-        if self.balence:
+        if self.balance:
             images = luminance_balance(images)
         images = [mask(camera.raw2bev(img)) 
                   for img, mask, camera in zip(images, self.masks, self.cameras)]
         surround = cv2.add(images[0],images[1])
         surround = cv2.add(surround,images[2])
         surround = cv2.add(surround,images[3])
-        if self.balence:
+        if self.balance:
             surround = color_balance(surround)
         if car is not None:
             surround = cv2.add(surround,car)
@@ -335,7 +337,7 @@ def main():
     car = cv2.imread('./data/car.jpg')
     car = padding(car, BEV_WIDTH, BEV_HEIGHT)
     
-    bev = BevGenerator(blend=True,balence=True)
+    bev = BevGenerator()
     surround = bev(front,back,left,right,car)
     
     cv2.namedWindow('surround', flags = cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
