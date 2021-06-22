@@ -45,6 +45,17 @@ from surroundBEV import BevGenerator
 bev = BevGenerator()                                # 初始化环视鸟瞰生成器
 surround = bev(front,back,left,right)               # 输入前后左右四张原始相机图像 得到拼接后的鸟瞰图
 ```
+  
+------------------------------------------------------------------------------------------------------  
+  
+拼接时使用**预设的MASK**，根据中间车辆图片的尺寸计算  
+直接拼接时，取车辆图片四个角与鸟瞰图四个角连线得到对应的mask,  
+融合拼接时，则取更大的区域使得各mask之间有重叠部分，在重叠区域内根据距离两个mask的距离计算权重  
+如下图所示（以前视图mask为例）：  
+![mask.jpg](https://i.loli.net/2021/06/22/Sm6wlYzqTxZahpg.png)
+  
+**拼接结果**：  
+![surround.jpg](https://i.loli.net/2021/06/22/2JRw31FszrDgxZK.png)  
 
 `2021.6 ZZH`  
   

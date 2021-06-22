@@ -12,7 +12,7 @@ parser.add_argument('-cw', '--CAR_WIDTH', default=250, type=int, help='Car Frame
 parser.add_argument('-ch', '--CAR_HEIGHT', default=400, type=int, help='Car Frame Height')
 parser.add_argument('-fs', '--FOCAL_SCALE', default=1, type=float, help='Camera Undistort Focal Scale')
 parser.add_argument('-ss', '--SIZE_SCALE', default=2, type=float, help='Camera Undistort Size Scale')
-parser.add_argument('-blend','--BLEND_FLAG', default=False, type=bool, help='Blend BEV Image (Ture/False)')
+parser.add_argument('-blend','--BLEND_FLAG', default=True, type=bool, help='Blend BEV Image (Ture/False)')
 parser.add_argument('-balance','--BALANCE_FLAG', default=False, type=bool, help='Balance BEV Image (Ture/False)')
 args = parser.parse_args()
 

@@ -4,7 +4,7 @@
 Requirement： opencv(>=3.4.2) numpy(>=1.19.2)  
   
 使用`intrinsicCalib.py`可以完成相机的**在线标定**和**离线标定**，包含**鱼眼相机**和**普通相机**模型，  
-同时支持**相机、视频、图像**三种输入，生成**相机内参**和**畸变向量**  
+同时支持**相机、视频、图像**三种输入，生成**相机内参**和**畸变向量**，并显示**重投影误差**    
 详细注释包含在`intrinsicCalib.ipynb`中，也可以在Jupyter Notebook中直接运行该代码   
 可以根据得到的相机内参和畸变向量文件用Tools中的`undistort.py`完成图像去畸变处理  
   
@@ -23,7 +23,7 @@ Requirement： opencv(>=3.4.2) numpy(>=1.19.2)
 ### intrinsicCalib.py 
 > 相机内参标定  
 
-连接相机后并准备好棋盘标定板后，在命令行运行即可 
+**连接相机**后并准备好棋盘标定板后，在命令行运行即可（默认相机在线标定）  
 ```
 python intrinsicCalib.py
 ```
@@ -67,7 +67,7 @@ python intrinsicCalib.py -h
    
 #### 示例1 (在线标定)      
 **此时为鱼眼相机自动在线标定** （默认设置）    
-若相机分辨率设置为1280×720，棋盘格**角点数**为6×8，每小格**边长**20mm，未输入参数保持默认值，则键入  
+若相机分辨率设置为1280×720，棋盘格**角点数**为6×8，每小格**边长**20mm(也可以不设置保持默认)，未输入参数保持默认值，则键入  
 ```
 python intrinsicCalib.py -fw 1280 -fh 720 -bw 6 -bh 8 -size 20
 ```  
@@ -98,16 +98,18 @@ python intrinsicCalib.py -fw 1280 -fh 720 -bw 6 -bh 8 -size 20
   
 #### 示例2 (离线标定)    
 (注：**建议将视频或图像放下./data/下并按默认值命名**，可以省去参数输入便于使用)  
-若离线标定，输入为本地视频，文件位于./data/video.mp4，棋盘格角点数为6×8，每小格边长20mm，未输入参数保持默认值，则键入  
+若离线标定，输入为本地视频，文件位于./data/video.mp4，棋盘格角点数为6×8，未输入参数保持默认值，则键入  
 ```
-python intrinsicCalib.py -input video -path ./data/ -video video.mp4 -bw 6 -bh 8 -size 20
+python intrinsicCalib.py -input video -path ./data/ -video video.mp4 -bw 6 -bh 8
 ```  
   
-若离线标定，输入为本地图片，文件位于./data/下，图片命名为img_raw_xxx.xxx，棋盘格角点数为6×8，每小格边长20mm，未输入参数保持默认值，则键入  
+若离线标定，输入为本地图片，文件位于./data/下，图片命名为img_raw_xxx.xxx，棋盘格角点数为7×6，未输入参数保持默认值，则键入  
 ```
-python intrinsicCalib.py -input image -path ./data/ -image img_raw -bw 6 -bh 8 -size 20
+python intrinsicCalib.py -input image -path ./data/ -image img_raw -bw 7 -bh 6
 ```    
-**脚本会将输入路径下所有包含该命名前缀的所有图片作为输入**
+**脚本会将输入路径下所有包含该命名前缀的所有图片作为输入**  
+读入示例提供的图片，可以看到标定结果和去畸变图像  
+![inCalib_result.jpg](https://i.loli.net/2021/06/22/nxOsU1mM4D3kJWS.png)   
   
 --------------------------------------------------------------------------------
   
@@ -121,7 +123,7 @@ python intrinsicCalib.py -input image -path ./data/ -image img_raw -bw 6 -bh 8 -
 输出界面会显示已捕获的有效图片数量  
 例：
 ```
-python intrinsicCalib.py -mode manual -fw 1280 -fh 720 -bw 6 -bh 8 -size 20
+python intrinsicCalib.py -input image -mode manual -fw 1280 -fh 1024 -bw 7 -bh 6
 ```    
   
 --------------------------------------------------------------------------------  
@@ -146,8 +148,10 @@ python intrinsicCalib.py  -fw 1280 -fh 720 -bw 6 -bh 8 -num 10 -delay 15 -store 
   
 #### 常见问题  
 - linux下推荐使用`cv2.VideoCapture(f"/dev/video{id}")`代替`cv2.VideoCapture(id)`读取相机图片  
-- 若相机标定时，去畸变图像出现异常，此时可能计算发散，重投影误差很大，需要退出重新标定，
-一般是由于前几张图像质量不好导致初始化错误而发散，请检查参数设置，并可以尝试修改`-num` `-delay` `subpix`等值，更换图片顺序等，或者重新采集图像  
+- 若相机标定时，去畸变图像出现异常，此时可能计算发散，重投影误差很大，需要ESC退出重新标定，  
+一般是由于前几张图像质量不好导致初始化错误而发散，请检查参数设置，保证标定板平直，    
+并可以尝试修改`-num` `-delay` `subpix`等值，更换图片顺序等，或者重新采集图像  
+- 鱼眼相机模型和普通相机模型不同，尤其是去畸变向量的表达不同，都有各自的opencv函数进行处理    
   
 --------------------------------------------------------------------------------  
   

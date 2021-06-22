@@ -41,6 +41,7 @@ def runInCalib_2():
     print("Reprojection Error is : {}".format(np.mean(result.reproj_err)))
 
     raw_frame = cv2.imread('./IntrinsicCalibration/data/img_raw0.jpg')
+    # calibrator.draw_corners(raw_frame)                  # 画出角点
     cv2.imshow("Raw Image", raw_frame)
     undist_img = calibrator.undistort(raw_frame)        # 使用undistort方法得到去畸变图像
     cv2.imshow("Undistort Image", undist_img)

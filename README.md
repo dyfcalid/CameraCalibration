@@ -91,6 +91,10 @@ args.INPUT_PATH = './IntrinsicCalibration/data/'
 InCalibrator.edit_args(args)                        # 修改args参数
 calibrator = InCalibrator(camera_type)              # 初始化内参标定器
 ```  
+
+示例结果：  
+<img src="https://i.loli.net/2021/06/22/nxOsU1mM4D3kJWS.png" width="750" height="200" alt="inCalib_result.jpg"/>  
+<img src="https://i.loli.net/2021/06/22/iVETOUIMqCRHDYr.png" width="750" height="300" alt="inCalib_image.jpg"/>  
   
   
 ## Camera Extrinsic Calibration  
@@ -121,6 +125,9 @@ args.INPUT_PATH = './ExtrinsicCalibration/data/'
 ExCalibrator.edit_args(args)                        # 修改args参数
 exCalib = ExCalibrator()                            # 初始化外参标定器
 ```    
+  
+示例结果：   
+![exCalib_result.jpg](https://i.loli.net/2021/06/22/5fMmcxTuZ2aIUyN.png)   
   
   
 ## Surround Camera Bird Eye View  
@@ -156,6 +163,11 @@ BevGenerator.edit_args(args)                        # 修改为新的参数
 bev = BevGenerator()                                # 初始化环视鸟瞰生成器
 ```    
   
+示例结果：    
+<div align=center><img src="https://i.loli.net/2021/06/22/fOwPsTYkCFeo8dW.png" width="740" height="170" alt="camera.jpg"/></div>  
+<div align=center><img src="https://i.loli.net/2021/06/22/HeKJVBm2vEINy4z.png" width="360" height="400" alt="bev.jpg"/></div>   
+   
+   
 ## Other Tools  
 用`collect.py`可以开启相机完成图像或视频的**数据采集**  
 用`undistort.py`可以批量完成图像的**去畸变处理**   
@@ -166,3 +178,4 @@ bev = BevGenerator()                                # 初始化环视鸟瞰生�
   
 
 `2021.6 ZZH`  
+  
