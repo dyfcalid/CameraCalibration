@@ -2,6 +2,10 @@
 > 集合了相机标定相关的多个脚本工具，便于完成完整的车载环视相机标定流程  
 > 各代码文件均可单独使用，此外也提供了外部接口以供调用  
   
+![](https://img.shields.io/badge/Language-python-blue.svg) 　
+![](https://img.shields.io/badge/Requirement-openCV-brightgreen) 　
+![License](https://img.shields.io/badge/License-GPL-orange.svg)
+
 ## DEMO
 ![DEMO](demo.gif)
 
@@ -175,7 +179,10 @@ bev = BevGenerator()                                # 初始化环视鸟瞰生�
 用`timeAlign.py`可以将以**时间戳**命名的图片按时间**对准**，得到对应的列表   
 用`img2vid.py`可以将图片转化为视频  
      
+## License  
+[GPL-3.0 License](LICENSE)  
   
-
-`2021.6 ZZH`  
+  
+*`Copyright (c) 2021 ZZH`*  
+  
   
