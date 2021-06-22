@@ -88,11 +88,10 @@ calibrator = InCalibrator(camera_type)              # 初始化内参标定器
 calib = CalibMode(calibrator, input_type, mode)     # 选择标定模式
 result = calib()                                    # 开始标定
 ```
-可以直接修改原文件中的各参数，或使用`get_args()`和`edit_args()`方法修改
+可以直接修改原文件中的各参数，或使用`get_args()`方法获取参数并修改
 ```
 args = InCalibrator.get_args()                      # 获取args参数
-args.INPUT_PATH = './IntrinsicCalibration/data/'
-InCalibrator.edit_args(args)                        # 修改args参数
+args.INPUT_PATH = './IntrinsicCalibration/data/'    # 修改args参数
 calibrator = InCalibrator(camera_type)              # 初始化内参标定器
 ```  
 
@@ -122,11 +121,10 @@ exCalib = ExCalibrator()                            # 初始化外参标定器
 homography = exCalib(src_raw, dst_raw)              # 输入对应的两张去畸变图像 得到单应性矩阵
 src_warp = exCalib.warp()                           # 使用warp方法得到原始图像的变换结果
 ```    
-可以直接修改原文件中的各参数，或使用`get_args()`和`edit_args()`方法修改  
+可以直接修改原文件中的各参数，或使用`get_args()`方法获取参数并修改  
 ```
 args = ExCalibrator.get_args()                      # 获取args参数
-args.INPUT_PATH = './ExtrinsicCalibration/data/'
-ExCalibrator.edit_args(args)                        # 修改args参数
+args.INPUT_PATH = './ExtrinsicCalibration/data/'    # 修改args参数
 exCalib = ExCalibrator()                            # 初始化外参标定器
 ```    
   
@@ -158,12 +156,11 @@ surround = bev(front,back,left,right)               # 输入前后左右四张�
 bev = BevGenerator(blend=True, balance=True)        # 使用图像融合以及平衡
 surround = bev(front,back,left,right,car)           # 可以加入车辆图片
 ```
-可以直接修改原文件中的各参数，或使用`get_args()`和`edit_args()`方法修改  
+可以直接修改原文件中的各参数，或使用`get_args()`方法获取参数并修改  
 ```
 args = BevGenerator.get_args()                      # 获取环视鸟瞰args参数
 args.CAR_WIDTH = 200
-args.CAR_HEIGHT = 350
-BevGenerator.edit_args(args)                        # 修改为新的参数
+args.CAR_HEIGHT = 350                               # 修改为新的参数
 bev = BevGenerator()                                # 初始化环视鸟瞰生成器
 ```    
   

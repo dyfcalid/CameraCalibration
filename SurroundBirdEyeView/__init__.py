@@ -16,6 +16,5 @@ You can edit parameters in the original file, or
     args = BevGenerator.get_args()
     args.CAR_WIDTH = 200
     args.CAR_HEIGHT = 350
-    BevGenerator.edit_args(args)
     bev = BevGenerator()
 """

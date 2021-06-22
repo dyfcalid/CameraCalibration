@@ -30,8 +30,7 @@ def runInCalib_1():
 def runInCalib_2():
     print("Intrinsic Calibration ......")
     args = InCalibrator.get_args()                      # 获取内参标定args参数
-    args.INPUT_PATH = './IntrinsicCalibration/data/'
-    InCalibrator.edit_args(args)                        # 修改为新的参数
+    args.INPUT_PATH = './IntrinsicCalibration/data/'    # 修改为新的参数
     calibrator = InCalibrator('fisheye')                # 初始化内参标定器
     calib = CalibMode(calibrator, 'image', 'auto')      # 选择标定模式
     result = calib()                                    # 开始标定
@@ -79,8 +78,7 @@ def runBEV():
 
     args = BevGenerator.get_args()                      # 获取环视鸟瞰args参数
     args.CAR_WIDTH = 200
-    args.CAR_HEIGHT = 350
-    BevGenerator.edit_args(args)                        # 修改为新的参数
+    args.CAR_HEIGHT = 350                               # 修改为新的参数
 
     bev = BevGenerator(blend=True, balance=True)        # 初始化环视鸟瞰图生成器
     surround = bev(front, back, left, right)            # 输入前后左右四张原始相机图像 得到拼接后的鸟瞰图

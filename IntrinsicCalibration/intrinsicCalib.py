@@ -176,11 +176,6 @@ class InCalibrator:
     def get_args():
         return args
 
-    @staticmethod
-    def edit_args(new_args):
-        global args
-        args = new_args
-
     def get_corners(self, img):
         ok, corners = cv2.findChessboardCorners(img, (args.BORAD_WIDTH, args.BORAD_HEIGHT),
                       flags = cv2.CALIB_CB_ADAPTIVE_THRESH|cv2.CALIB_CB_NORMALIZE_IMAGE|cv2.CALIB_CB_FAST_CHECK)

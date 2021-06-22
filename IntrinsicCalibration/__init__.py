@@ -19,6 +19,5 @@ or
 You can edit parameters in the original file, or
     args = InCalibrator.get_args()
     args.INPUT_PATH = './IntrinsicCalibration/data/'
-    InCalibrator.edit_args(args)
     calibrator = InCalibrator(camera_type)
 """

@@ -297,11 +297,6 @@ class BevGenerator:
     def get_args():
         return args
 
-    @staticmethod
-    def edit_args(new_args):
-        global args
-        args = new_args
-
     def init_args(self):
         global FRAME_WIDTH, FRAME_HEIGHT, BEV_WIDTH, BEV_HEIGHT
         global CAR_WIDTH, CAR_HEIGHT, FOCAL_SCALE, SIZE_SCALE

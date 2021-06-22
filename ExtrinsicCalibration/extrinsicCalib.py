@@ -138,11 +138,6 @@ class ExCalibrator():
     def get_args():
         return args
 
-    @staticmethod
-    def edit_args(new_args):
-        global args
-        args = new_args
-
     def imgPreprocess(self, img, center, scale):
         if center:
             centerImg = CenterImage()
