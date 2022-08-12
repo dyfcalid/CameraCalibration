@@ -271,8 +271,8 @@ class BlendMask:
         overlap = cv2.bitwise_and(maskA, maskB)
         indices = np.where(overlap != 0)
         for y, x in zip(*indices):
-            distA = cv2.pointPolygonTest(np.array(lineA), (x, y), True)
-            distB = cv2.pointPolygonTest(np.array(lineB), (x, y), True)
+            distA = cv2.pointPolygonTest(np.array(lineA), (int(x), int(y)), True)
+            distB = cv2.pointPolygonTest(np.array(lineB), (int(x), int(y)), True)
             maskA[y, x] = distA**2 / (distA**2 + distB**2 + 1e-6) * 255
         return maskA
     
