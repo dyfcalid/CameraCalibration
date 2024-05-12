@@ -288,24 +288,35 @@ class CalibMode():
         return result
     
     def videoAutoMode(self):
+        max_try = 5
+        now_try = 0
         cap = cv2.VideoCapture(args.INPUT_PATH + args.VIDEO_FILE)
         if not cap.isOpened(): 
             raise Exception("from {} read video failed".format(args.INPUT_PATH + args.VIDEO_FILE))
         frame_id = 0
         while True:
             ok, raw_frame = cap.read()
-            raw_frame = self.imgPreprocess(raw_frame)
-            if frame_id % args.FRAME_DELAY == 0:
-                if args.STORE_FLAG:
-                    cv2.imwrite(args.STORE_PATH + 'img_raw{}.jpg'.format(len(self.calibrator.corners)), raw_frame)
-                result = self.runCalib(raw_frame) 
-                print(len(self.calibrator.corners))
-            frame_id += 1 
-            key = cv2.waitKey(1)
-            if key == 27: break
+            if ok:
+                now_try = 0
+                raw_frame = self.imgPreprocess(raw_frame)
+                if frame_id % args.FRAME_DELAY == 0:
+                    if args.STORE_FLAG:
+                        cv2.imwrite(args.STORE_PATH + 'img_raw{}.jpg'.format(len(self.calibrator.corners)), raw_frame)
+                    result = self.runCalib(raw_frame) 
+                    print(len(self.calibrator.corners))
+                frame_id += 1 
+                key = cv2.waitKey(1)
+                if key == 27: break
+            else: 
+                now_try += 1
+                if now_try > max_try:
+                    cap.release()
+                    cv2.destroyAllWindows() 
+                    return result
         cap.release()
         cv2.destroyAllWindows() 
         return result
+
     
     def videoManualMode(self):
         cap = cv2.VideoCapture(args.INPUT_PATH + args.VIDEO_FILE)
