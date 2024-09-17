@@ -12,7 +12,7 @@ parser.add_argument('-cw', '--CAR_WIDTH', default=250, type=int, help='Car Frame
 parser.add_argument('-ch', '--CAR_HEIGHT', default=400, type=int, help='Car Frame Height')
 parser.add_argument('-fs', '--FOCAL_SCALE', default=1, type=float, help='Camera Undistort Focal Scale')
 parser.add_argument('-ss', '--SIZE_SCALE', default=2, type=float, help='Camera Undistort Size Scale')
-parser.add_argument('-blend','--BLEND_FLAG', default=False, type=bool, help='Blend BEV Image (Ture/False)')
+parser.add_argument('-blend','--BLEND_FLAG', default=True, type=bool, help='Blend BEV Image (Ture/False)')
 parser.add_argument('-balance','--BALANCE_FLAG', default=False, type=bool, help='Balance BEV Image (Ture/False)')
 args = parser.parse_args()
 
@@ -271,8 +271,9 @@ class BlendMask:
         overlap = cv2.bitwise_and(maskA, maskB)
         indices = np.where(overlap != 0)
         for y, x in zip(*indices):
-            distA = cv2.pointPolygonTest(np.array(lineA), (x, y), True)
-            distB = cv2.pointPolygonTest(np.array(lineB), (x, y), True)
+            # Change the order of x and y in the point tuple
+            distA = cv2.pointPolygonTest(np.array(lineA), (float(x), float(y)), True)
+            distB = cv2.pointPolygonTest(np.array(lineB), (float(x), float(y)), True)
             maskA[y, x] = distA**2 / (distA**2 + distB**2 + 1e-6) * 255
         return maskA
     
